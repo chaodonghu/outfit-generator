@@ -20,7 +20,8 @@ A cozy Windows 98-inspired desktop app that lets you choose tops and bottoms, up
    npm install
 
 2. **Add your .env file**
-```VITE_SUPABASE_URL=your_supabase_project_url
+```
+VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_GOOGLE_API_KEY=your_google_api_key
 ```
