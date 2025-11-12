@@ -52,7 +52,10 @@ const DEFAULT_BODY_PATH = "/assets/model.png";
 const CACHE_PREFIX = "outfit_";
 
 const genAI = new GoogleGenAI({
-  apiKey: import.meta.env.VITE_GOOGLE_API_KEY || "",
+  apiKey: import.meta.env.VITE_LITE_LLM_KEY || "",
+  httpOptions: {
+    baseUrl: import.meta.env.VITE_LITE_LLM_BASE_URL || "",
+  },
 });
 
 function cacheKeyFor(
