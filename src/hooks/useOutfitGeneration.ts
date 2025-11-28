@@ -1,12 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-// import {
-//   outfitGenerator,
-//   OutfitGenerationResult,
-// } from "../services/outfitGenerator";
 import {
-  outfitGeneratorOpenAI as outfitGenerator,
+  outfitGenerator,
   OutfitGenerationResult,
-} from "../services/outfitGeneratorOpenAI";
+} from "../services/outfitGenerator";
 import { imageComposer } from "../services/imageComposer";
 import { rateLimiter } from "../services/rateLimiter";
 import type {
@@ -30,8 +26,8 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
   // Check API key availability
   useEffect(() => {
     const hasValidApiKey = Boolean(
-      import.meta.env.VITE_OPENAI_API_KEY &&
-        import.meta.env.VITE_OPENAI_API_KEY !== "your_openai_api_key_here"
+      import.meta.env.VITE_GOOGLE_API_KEY &&
+        import.meta.env.VITE_GOOGLE_API_KEY !== "your_google_api_key_here"
     );
     setApiRequired(!hasValidApiKey);
   }, []);
@@ -42,9 +38,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
 
   const generateOutfit = useCallback(
     async (top: ClothingItem, bottom: ClothingItem) => {
-      console.log("🎯 generateOutfit callback called!");
-      console.log("Using OpenAI generator");
-      
       if (inFlightRef.current) {
         console.warn(
           "⏳ Generate already in flight. Ignoring duplicate click."
@@ -90,20 +83,8 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
         );
 
         // Try AI generation first
-        console.log("📞 About to call outfitGenerator.generateOutfit");
-        console.log("Top URL:", top.imageUrl);
-        console.log("Bottom URL:", bottom.imageUrl);
-        
         const result: OutfitGenerationResult =
-          await outfitGenerator.generateOutfit(
-            top.imageUrl,
-            bottom.imageUrl,
-            "a male fashion model on a white background",
-            top.id,
-            bottom.id
-          );
-        
-        console.log("📦 Received result from OpenAI:", result);
+          await outfitGenerator.generateOutfit(top.imageUrl, bottom.imageUrl);
 
         if (result.success && result.imageUrl) {
           console.log("✨ AI-generated image created successfully");

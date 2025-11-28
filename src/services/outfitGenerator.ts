@@ -5,17 +5,6 @@ function isQuotaError(err: any): boolean {
   return status === "RESOURCE_EXHAUSTED";
 }
 
-function isTimeoutError(err: any): boolean {
-  const code = err?.error?.code || err?.status || err?.code;
-  if (code === 503 || code === 504) return true;
-  const message = err?.message || err?.error?.message || "";
-  return message.includes("Deadline expired") || message.includes("timeout");
-}
-
-function isRetryableError(err: any): boolean {
-  return isQuotaError(err) || isTimeoutError(err);
-}
-
 function getRetryMsFromError(err: any, fallbackMs = 20000): number {
   try {
     const details = err?.error?.details || [];
@@ -47,15 +36,12 @@ export interface OutfitGenerationResult {
 }
 
 // Constants
-const MODEL = "gemini-2.5-flash-image-preview"; // Using official model with free tier support
+const MODEL = "gemini-2.5-flash-image-preview";
 const DEFAULT_BODY_PATH = "/assets/model.png";
 const CACHE_PREFIX = "outfit_";
 
 const genAI = new GoogleGenAI({
-  apiKey: import.meta.env.VITE_LITE_LLM_KEY || "",
-  httpOptions: {
-    baseUrl: import.meta.env.VITE_LITE_LLM_BASE_URL || "",
-  },
+  apiKey: import.meta.env.VITE_GOOGLE_API_KEY || "",
 });
 
 function cacheKeyFor(
@@ -73,79 +59,10 @@ function buildPrompt(): string {
 
 // Intentionally unused experimental prompt helpers removed to reduce noise
 
-// Helper function to resize and compress images to reduce API timeout issues
-async function resizeImage(
-  blob: Blob,
-  maxWidth: number = 1024,
-  maxHeight: number = 1024,
-  quality: number = 0.85
-): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(blob);
-
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-
-      let width = img.width;
-      let height = img.height;
-
-      // Calculate new dimensions while maintaining aspect ratio
-      if (width > maxWidth || height > maxHeight) {
-        const ratio = Math.min(maxWidth / width, maxHeight / height);
-        width = Math.round(width * ratio);
-        height = Math.round(height * ratio);
-      }
-
-      // Create canvas and resize
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-
-      if (!ctx) {
-        reject(new Error("Failed to get canvas context"));
-        return;
-      }
-
-      ctx.drawImage(img, 0, 0, width, height);
-
-      canvas.toBlob(
-        (resizedBlob) => {
-          if (resizedBlob) {
-            resolve(resizedBlob);
-          } else {
-            reject(new Error("Failed to resize image"));
-          }
-        },
-        "image/jpeg",
-        quality
-      );
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Failed to load image for resizing"));
-    };
-
-    img.src = url;
-  });
-}
-
 async function toBase64(path: string): Promise<string> {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`Failed to load ${path}`);
-  let blob = await res.blob();
-
-  // Resize image to reduce API timeout issues
-  try {
-    blob = await resizeImage(blob, 1024, 1024, 0.85);
-    console.log("Image resized for API efficiency");
-  } catch (err) {
-    console.warn("Failed to resize image, using original:", err);
-    // Continue with original blob if resize fails
-  }
-
+  const blob = await res.blob();
   // Use FileReader to avoid spreading a large Uint8Array into a single call (which overflows the call stack).
   return await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -239,44 +156,22 @@ async function generateOutfitInternal(
     { inlineData: { mimeType: "image/png", data: bodyB64 } }, // image 3 body
   ];
 
-  console.log("Generating outfit with contents!!!!!!!!!!!!:", contents);
-
   let resp;
   let attempt = 0;
   const maxAttempts = 3;
-  while (attempt < maxAttempts) {
+  while (true) {
     try {
-      console.log("Generating content with model:", MODEL);
       resp = await genAI.models.generateContent({ model: MODEL, contents });
-      console.log("✅ Successfully received response from Gemini");
       break;
     } catch (err: any) {
-      if (!isRetryableError(err) || attempt >= maxAttempts - 1) {
+      if (!isQuotaError(err) || attempt >= maxAttempts - 1) {
         const msg =
           typeof err?.message === "string" ? err.message : JSON.stringify(err);
-        if (isQuotaError(err)) {
-          return {
-            success: false,
-            error: `API rate limit exceeded. Please wait 60 seconds before trying again.`,
-          };
-        }
-        if (isTimeoutError(err)) {
-          return {
-            success: false,
-            error: `Request timeout. Images have been compressed to 1024x1024. If this persists, try waiting a moment or using smaller source images.`,
-          };
-        }
         return { success: false, error: `Gemini API error. ${msg}` };
       }
       attempt += 1;
-      const base = isTimeoutError(err) ? 5000 : 60000; // Shorter retry for timeouts
-      const waitMs = Math.round(base * Math.pow(1.5, attempt - 1));
-      const errorType = isTimeoutError(err) ? "Timeout" : "Rate limit";
-      console.log(
-        `⏳ ${errorType} hit. Waiting ${Math.round(
-          waitMs / 1000
-        )}s before retry ${attempt}/${maxAttempts}...`
-      );
+      const base = getRetryMsFromError(err, 20000);
+      const waitMs = Math.round(base * Math.pow(2, attempt - 1));
       await new Promise((r) => setTimeout(r, waitMs));
     }
   }
@@ -351,37 +246,19 @@ async function generateNanoOutfitInternal(
   let resp;
   let attempt = 0;
   const maxAttempts = 3;
-  while (attempt < maxAttempts) {
+  while (true) {
     try {
       resp = await genAI.models.generateContent({ model: MODEL, contents });
       break;
     } catch (err: any) {
-      if (!isRetryableError(err) || attempt >= maxAttempts - 1) {
+      if (!isQuotaError(err) || attempt >= maxAttempts - 1) {
         const msg =
           typeof err?.message === "string" ? err.message : JSON.stringify(err);
-        if (isQuotaError(err)) {
-          return {
-            success: false,
-            error: `API rate limit exceeded. Please wait 60 seconds before trying again.`,
-          };
-        }
-        if (isTimeoutError(err)) {
-          return {
-            success: false,
-            error: `Request timeout. Images have been compressed to 1024x1024. If this persists, try waiting a moment.`,
-          };
-        }
         return { success: false, error: `Gemini API error. ${msg}` };
       }
       attempt += 1;
-      const base = isTimeoutError(err) ? 5000 : 60000; // Shorter retry for timeouts
-      const waitMs = Math.round(base * Math.pow(1.5, attempt - 1));
-      const errorType = isTimeoutError(err) ? "Timeout" : "Rate limit";
-      console.log(
-        `⏳ ${errorType} hit. Waiting ${Math.round(
-          waitMs / 1000
-        )}s before retry ${attempt}/${maxAttempts}...`
-      );
+      const base = getRetryMsFromError(err, 20000);
+      const waitMs = Math.round(base * Math.pow(2, attempt - 1));
       await new Promise((r) => setTimeout(r, waitMs));
     }
   }
@@ -451,37 +328,19 @@ async function generateOutfitTransferInternal(
   let resp;
   let attempt = 0;
   const maxAttempts = 3;
-  while (attempt < maxAttempts) {
+  while (true) {
     try {
       resp = await genAI.models.generateContent({ model: MODEL, contents });
       break;
     } catch (err: any) {
-      if (!isRetryableError(err) || attempt >= maxAttempts - 1) {
+      if (!isQuotaError(err) || attempt >= maxAttempts - 1) {
         const msg =
           typeof err?.message === "string" ? err.message : JSON.stringify(err);
-        if (isQuotaError(err)) {
-          return {
-            success: false,
-            error: `API rate limit exceeded. Please wait 60 seconds before trying again.`,
-          };
-        }
-        if (isTimeoutError(err)) {
-          return {
-            success: false,
-            error: `Request timeout. Images have been compressed to 1024x1024. If this persists, try waiting a moment.`,
-          };
-        }
         return { success: false, error: `Gemini API error. ${msg}` };
       }
       attempt += 1;
-      const base = isTimeoutError(err) ? 5000 : 60000; // Shorter retry for timeouts
-      const waitMs = Math.round(base * Math.pow(1.5, attempt - 1));
-      const errorType = isTimeoutError(err) ? "Timeout" : "Rate limit";
-      console.log(
-        `⏳ ${errorType} hit. Waiting ${Math.round(
-          waitMs / 1000
-        )}s before retry ${attempt}/${maxAttempts}...`
-      );
+      const base = getRetryMsFromError(err, 20000);
+      const waitMs = Math.round(base * Math.pow(2, attempt - 1));
       await new Promise((r) => setTimeout(r, waitMs));
     }
   }
