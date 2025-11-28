@@ -41,7 +41,12 @@ const DEFAULT_BODY_PATH = "/assets/model.png";
 const CACHE_PREFIX = "outfit_";
 
 const genAI = new GoogleGenAI({
-  apiKey: import.meta.env.VITE_GOOGLE_API_KEY || "",
+  apiKey: import.meta.env.VITE_LITE_LLM_KEY || "",
+  httpOptions: {
+    baseUrl:
+      import.meta.env.VITE_LITE_LLM_BASE_URL ||
+      "",
+  },
 });
 
 function cacheKeyFor(
@@ -98,12 +103,12 @@ async function generateOutfitInternal(
   topId?: string,
   bottomId?: string
 ): Promise<OutfitGenerationResult> {
-  if (!import.meta.env.VITE_GOOGLE_API_KEY) {
-    return {
-      success: false,
-      error: "Set VITE_GOOGLE_API_KEY and enable billing for image generation.",
-    };
-  }
+  // if (!import.meta.env.VITE_GOOGLE_API_KEY) {
+  //   return {
+  //     success: false,
+  //     error: "Set VITE_GOOGLE_API_KEY and enable billing for image generation.",
+  //   };
+  // }
 
   // Check Supabase cache first if we have IDs
   if (topId && bottomId) {
@@ -155,15 +160,19 @@ async function generateOutfitInternal(
     { inlineData: { mimeType: "image/png", data: bottomB64 } }, // image 2 bottom
     { inlineData: { mimeType: "image/png", data: bodyB64 } }, // image 3 body
   ];
+  console.log("Generating outfit with contents:!!!!!!!", JSON.stringify(contents));
 
   let resp;
   let attempt = 0;
   const maxAttempts = 3;
   while (true) {
     try {
+      console.log("gen ai model!!!!!!!", genAI);
       resp = await genAI.models.generateContent({ model: MODEL, contents });
+      console.log("resp!!!!!!!", resp);
       break;
     } catch (err: any) {
+      console.log("err!!!!!!!", err);
       if (!isQuotaError(err) || attempt >= maxAttempts - 1) {
         const msg =
           typeof err?.message === "string" ? err.message : JSON.stringify(err);
