@@ -317,7 +317,6 @@ textarea {
   max-width: 50%;
   display: flex;
   justify-content: center;
-  align-items: center;
   min-width: 0;
 }
 
@@ -355,8 +354,8 @@ textarea {
    =========================== */
 
 .clothes-window {
-  width: 180px;
-  height: 180px;
+  width: 280px;
+  height: 240px;
   background: #fafafa;
   border-radius: var(--radius-md);
   border: 2px solid var(--macos-border);
@@ -373,8 +372,8 @@ textarea {
 }
 
 .clothing-item {
-  max-width: 150px;
-  max-height: 150px;
+  max-width: 250px;
+  max-height: 240px;
   object-fit: contain;
   image-rendering: auto;
   -webkit-user-drag: none;
@@ -388,7 +387,7 @@ textarea {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-xl);
 }
 
 .nav-button {
