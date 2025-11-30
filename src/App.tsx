@@ -134,9 +134,7 @@ function App() {
   // Check if API key is configured
   const hasApiKey = Boolean(
     import.meta.env.VITE_GOOGLE_API_KEY &&
-      import.meta.env.VITE_GOOGLE_API_KEY !== "your_google_api_key_here" && 
-      import.meta.env.VITE_OPENAI_API_KEY &&
-      import.meta.env.VITE_OPENAI_API_KEY !== "your_openai_api_key_here"
+      import.meta.env.VITE_GOOGLE_API_KEY !== "your_google_api_key_here"
   );
 
   // Test connection function
