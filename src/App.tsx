@@ -35,6 +35,7 @@ function App() {
   const [showOutfitTransferWindow, setShowOutfitTransferWindow] =
     useState<boolean>(false);
   const [isLoadingItems, setIsLoadingItems] = useState<boolean>(true);
+  const [modelImageUrl, setModelImageUrl] = useState<string>("/assets/model.png");
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     // Check localStorage first, then system preference
     const saved = localStorage.getItem("theme");
@@ -168,6 +169,35 @@ function App() {
 
   // Debug data mismatch function
 
+  // Handle model image upload
+  const handleModelUpload = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+
+    input.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        // Create a data URL for immediate preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result as string;
+          setModelImageUrl(dataUrl);
+          debugLog("Model image uploaded:", file.name);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    input.click();
+  }, []);
+
+  // Reset model to default
+  const handleResetModel = useCallback(() => {
+    setModelImageUrl("/assets/model.png");
+    debugLog("Model image reset to default");
+  }, []);
+
   // Handle file upload
   const handleFileUpload = useCallback(
     async (category: "tops" | "bottoms") => {
@@ -293,7 +323,7 @@ function App() {
 
       // Reset progress and start generation
       setGenerationProgress(0);
-      await generateOutfit(topItem, bottomItem);
+      await generateOutfit(topItem, bottomItem, modelImageUrl);
     }
   }, [
     canGenerate,
@@ -303,6 +333,7 @@ function App() {
     previewBottom,
     topsList,
     bottomsList,
+    modelImageUrl,
   ]);
 
   // Progress animation effect
@@ -400,12 +431,12 @@ function App() {
       debugLog("Nano styling with occasion:", occasionText);
 
       // Use the hook's generateNanoOutfit method
-      await generateNanoOutfit(occasionText);
+      await generateNanoOutfit(occasionText, modelImageUrl);
     } catch (error: any) {
       console.error("Error in nano styling:", error);
       // Error handling is already done in the hook
     }
-  }, [nanoText, hasApiKey, canGenerate, generateNanoOutfit]);
+  }, [nanoText, hasApiKey, canGenerate, generateNanoOutfit, modelImageUrl]);
 
   // Handle outfit transfer
   const handleOutfitTransfer = useCallback(
@@ -423,13 +454,13 @@ function App() {
 
       try {
         debugLog("Starting outfit transfer with file:", file.name);
-        await generateOutfitTransfer(file);
+        await generateOutfitTransfer(file, modelImageUrl);
       } catch (error: any) {
         console.error("Error in outfit transfer:", error);
         // Error handling is already done in the hook
       }
     },
-    [hasApiKey, canGenerate, generateOutfitTransfer]
+    [hasApiKey, canGenerate, generateOutfitTransfer, modelImageUrl]
   );
   return (
     <>
@@ -489,6 +520,9 @@ function App() {
             error={error}
             generatedImage={generatedImage}
             onClearGeneratedImage={clearGeneratedImage}
+            modelImageUrl={modelImageUrl}
+            onUploadModel={handleModelUpload}
+            onResetModel={handleResetModel}
           />
         </div>
       </div>

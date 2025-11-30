@@ -5,6 +5,9 @@ interface OutfitPreviewProps {
   error: string | null;
   generatedImage: string | null;
   onClearGeneratedImage: () => void;
+  modelImageUrl: string;
+  onUploadModel: () => void;
+  onResetModel: () => void;
 }
 
 export function OutfitPreview({
@@ -14,7 +17,11 @@ export function OutfitPreview({
   error,
   generatedImage,
   onClearGeneratedImage,
+  modelImageUrl,
+  onUploadModel,
+  onResetModel,
 }: OutfitPreviewProps) {
+  const isDefaultModel = modelImageUrl === "/assets/model.png";
   return (
     <div className="right-column">
       <div className="outfit-preview">
@@ -47,15 +54,50 @@ export function OutfitPreview({
 
         {/* Show model image when not generating and no generated image */}
         {!isGenerating && !generatedImage && (
-          <img
-            src="/assets/model.png"
-            alt="Model"
-            style={{
-              maxWidth: "90%",
-              maxHeight: "90%",
-              objectFit: "contain",
-            }}
-          />
+          <>
+            <img
+              src={modelImageUrl}
+              alt="Model"
+              style={{
+                maxWidth: "90%",
+                maxHeight: "90%",
+                objectFit: "contain",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                bottom: "16px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                display: "flex",
+                gap: "8px",
+              }}
+            >
+              <button
+                onClick={onUploadModel}
+                style={{
+                  padding: "8px 16px",
+                  fontSize: "12px",
+                }}
+                title="Upload custom model image"
+              >
+                Upload Model
+              </button>
+              {!isDefaultModel && (
+                <button
+                  onClick={onResetModel}
+                  style={{
+                    padding: "8px 16px",
+                    fontSize: "12px",
+                  }}
+                  title="Reset to default model"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </>
         )}
 
         {!hasApiKey && (

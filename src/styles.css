@@ -622,6 +622,33 @@ textarea {
 }
 
 /* ===========================
+   Model Upload Controls
+   =========================== */
+
+.model-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.model-controls button {
+  padding: 8px 16px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--macos-border);
+  box-shadow: 0 2px 8px var(--macos-shadow);
+}
+
+body.dark-mode .model-controls button {
+  background: rgba(42, 42, 42, 0.95);
+}
+
+/* ===========================
    Upload Section
    =========================== */
 

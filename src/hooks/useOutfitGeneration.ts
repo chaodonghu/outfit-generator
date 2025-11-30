@@ -37,7 +37,7 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
   }, []);
 
   const generateOutfit = useCallback(
-    async (top: ClothingItem, bottom: ClothingItem) => {
+    async (top: ClothingItem, bottom: ClothingItem, modelImageUrl?: string) => {
       if (inFlightRef.current) {
         console.warn(
           "⏳ Generate already in flight. Ignoring duplicate click."
@@ -46,8 +46,9 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
       }
       inFlightRef.current = true;
 
-      // Use item IDs for cache key
-      const key = `outfit::${top.id}::${bottom.id}`;
+      // Use item IDs and model URL for cache key
+      const modelKey = modelImageUrl || "default";
+      const key = `outfit::${top.id}::${bottom.id}::${modelKey}`;
       if (cacheRef.current.has(key)) {
         const cached = cacheRef.current.get(key)!;
         console.log("♻️ Using cached result for", top.id, bottom.id);
@@ -84,7 +85,11 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
 
         // Try AI generation first
         const result: OutfitGenerationResult =
-          await outfitGenerator.generateOutfit(top.imageUrl, bottom.imageUrl);
+          await outfitGenerator.generateOutfit(
+            top.imageUrl,
+            bottom.imageUrl,
+            modelImageUrl || "/assets/model.png"
+          );
 
         if (result.success && result.imageUrl) {
           console.log("✨ AI-generated image created successfully");
@@ -132,7 +137,7 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
   );
 
   const generateNanoOutfit = useCallback(
-    async (occasion: string) => {
+    async (occasion: string, modelImageUrl?: string) => {
       if (inFlightRef.current) {
         console.warn(
           "⏳ Generate already in flight. Ignoring duplicate click."
@@ -141,8 +146,9 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
       }
       inFlightRef.current = true;
 
-      // Use occasion for cache key
-      const key = `nano::${occasion}`;
+      // Use occasion and model URL for cache key
+      const modelKey = modelImageUrl || "default";
+      const key = `nano::${occasion}::${modelKey}`;
       if (cacheRef.current.has(key)) {
         const cached = cacheRef.current.get(key)!;
         console.log("♻️ Using cached nano result for", occasion);
@@ -179,7 +185,10 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
 
         // Call the nano outfit generator
         const result: OutfitGenerationResult =
-          await outfitGenerator.generateNanoOutfit(occasion);
+          await outfitGenerator.generateNanoOutfit(
+            occasion,
+            modelImageUrl || "/assets/model.png"
+          );
 
         if (result.success && result.imageUrl) {
           console.log("✨ Nano outfit generated successfully");
@@ -207,7 +216,7 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
   );
 
   const generateOutfitTransfer = useCallback(
-    async (inspirationFile: File) => {
+    async (inspirationFile: File, modelImageUrl?: string) => {
       if (inFlightRef.current) {
         console.warn(
           "⏳ Generate already in flight. Ignoring duplicate click."
@@ -219,8 +228,9 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
       // Create a temporary URL for the file
       const inspirationUrl = URL.createObjectURL(inspirationFile);
 
-      // Use file name and size for cache key
-      const key = `transfer::${inspirationFile.name}::${inspirationFile.size}`;
+      // Use file name, size, and model URL for cache key
+      const modelKey = modelImageUrl || "default";
+      const key = `transfer::${inspirationFile.name}::${inspirationFile.size}::${modelKey}`;
       if (cacheRef.current.has(key)) {
         const cached = cacheRef.current.get(key)!;
         console.log(
@@ -262,7 +272,10 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
 
         // Call the outfit transfer generator
         const result: OutfitGenerationResult =
-          await outfitGenerator.generateOutfitTransfer(inspirationUrl);
+          await outfitGenerator.generateOutfitTransfer(
+            inspirationUrl,
+            modelImageUrl || "/assets/model.png"
+          );
 
         if (result.success && result.imageUrl) {
           console.log("✨ Outfit transfer completed successfully");
