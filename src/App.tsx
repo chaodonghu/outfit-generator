@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import "98.css/dist/98.css";
 import { useCarousel } from "./hooks/useCarousel";
 import { useOutfitGeneration } from "./hooks/useOutfitGeneration";
 import {
@@ -404,22 +403,9 @@ function App() {
     [hasApiKey, canGenerate, generateOutfitTransfer]
   );
   return (
-    <div
-      className="window"
-      style={{ width: "100vw", height: "100vh", margin: 0 }}
-    >
-      <div
-        className="window-body"
-        style={{
-          padding: 0,
-          height: "calc(100vh - 36px)",
-          background: "#c0c0c0",
-        }}
-      >
-        <div
-          className="main-container"
-          style={{ width: "100%", height: "calc(100% - 32px)" }}
-        >
+    <div className="window fullscreen">
+      <div className="window-body" style={{ padding: 0 }}>
+        <div className="main-container">
           {/* Left Column - Selection Area */}
           <div className="left-column">
             <UploadSection

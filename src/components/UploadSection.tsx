@@ -22,74 +22,37 @@ export function UploadSection({
         position: "relative",
       }}
     >
-      <img
-        src="/assets/Folder.png"
-        alt="Upload"
+      <button
         onClick={onToggleUploadMenu}
+        disabled={isUploading}
         style={{
-          width: "32px",
-          height: "32px",
-          imageRendering: "pixelated",
-          cursor: isUploading ? "not-allowed" : "pointer",
-          opacity: isUploading ? 0.6 : 1,
-          position: "relative",
+          width: "40px",
+          height: "40px",
+          padding: "0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "20px",
+          borderRadius: "8px",
         }}
         title="Upload new clothing item"
-      />
-      {isUploading && (
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            fontSize: "16px",
-            pointerEvents: "none",
-          }}
-        >
-          ⏳
-        </div>
-      )}
+      >
+        📁
+      </button>
 
       {/* Upload Menu */}
       {showUploadMenu && !isUploading && (
         <div
+          className="upload-menu"
           style={{
-            position: "absolute",
-            top: "0",
-            right: "36px",
-            background: "#c0c0c0",
-            border: "2px outset #c0c0c0",
-            padding: "4px",
-            zIndex: 1000,
-            display: "flex",
-            flexDirection: "column",
-            gap: "1px",
-            minWidth: "90px",
+            top: "48px",
+            right: "0",
           }}
         >
-          <button
-            onClick={onUploadTops}
-            style={{
-              padding: "2px 4px",
-              fontSize: "10px",
-              background: "#c0c0c0",
-              border: "1px outset #c0c0c0",
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={onUploadTops}>
             Upload Tops
           </button>
-          <button
-            onClick={onUploadBottoms}
-            style={{
-              padding: "2px 4px",
-              fontSize: "10px",
-              background: "#c0c0c0",
-              border: "1px outset #c0c0c0",
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={onUploadBottoms}>
             Upload Bottoms
           </button>
         </div>
