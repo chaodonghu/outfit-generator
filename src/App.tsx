@@ -11,7 +11,6 @@ import { rateLimiter } from "./services/rateLimiter";
 import { LocalClothingItem, RateLimitResult } from "./types";
 
 // Import components
-import { MenuBar } from "./components/MenuBar";
 import { UploadSection } from "./components/UploadSection";
 import { ClothingCarousel } from "./components/ClothingCarousel";
 import { ControlButtons } from "./components/ControlButtons";
@@ -409,14 +408,6 @@ function App() {
       className="window"
       style={{ width: "100vw", height: "100vh", margin: 0 }}
     >
-      <div className="title-bar">
-        <div className="title-bar-text">What should I wear today?</div>
-        <div className="title-bar-controls">
-          <button aria-label="Minimize"></button>
-          <button aria-label="Maximize"></button>
-          <button aria-label="Close"></button>
-        </div>
-      </div>
       <div
         className="window-body"
         style={{
@@ -425,7 +416,6 @@ function App() {
           background: "#c0c0c0",
         }}
       >
-        <MenuBar />
         <div
           className="main-container"
           style={{ width: "100%", height: "calc(100% - 32px)" }}
