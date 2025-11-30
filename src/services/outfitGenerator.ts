@@ -43,9 +43,7 @@ const CACHE_PREFIX = "outfit_";
 const genAI = new GoogleGenAI({
   apiKey: import.meta.env.VITE_LITE_LLM_KEY || "",
   httpOptions: {
-    baseUrl:
-      import.meta.env.VITE_LITE_LLM_BASE_URL ||
-      "",
+    baseUrl: import.meta.env.VITE_LITE_LLM_BASE_URL || "",
   },
 });
 
@@ -157,10 +155,13 @@ async function generateOutfitInternal(
   const contents = [
     { text: prompt },
     { inlineData: { mimeType: "image/png", data: topB64 } }, // image 1 top
-    { inlineData: { mimeType: "image/png", data: bottomB64 } }, // image 2 bottom
+    // { inlineData: { mimeType: "image/png", data: bottomB64 } }, // image 2 bottom
     { inlineData: { mimeType: "image/png", data: bodyB64 } }, // image 3 body
   ];
-  console.log("Generating outfit with contents:!!!!!!!", JSON.stringify(contents));
+  console.log(
+    "Generating outfit with contents:!!!!!!!",
+    JSON.stringify(contents)
+  );
 
   let resp;
   let attempt = 0;
