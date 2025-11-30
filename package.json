@@ -23,7 +23,6 @@
     "@supabase/supabase-js": "^2.57.4",
     "@types/node": "^24.3.1",
     "98.css": "^0.1.21",
-    "openai": "^6.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

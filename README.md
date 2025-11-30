@@ -26,6 +26,8 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_GOOGLE_API_KEY=your_google_api_key
 ```
 
+<!-- Using LiteLLM proxy here (https://docs.litellm.ai/docs/pass_through/google_ai_studio#examples) instead as a substitute to Google API -->
+
 3. **Run the app**
 ```npm run dev```
 Your retro window should pop up! 
