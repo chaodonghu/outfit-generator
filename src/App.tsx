@@ -34,6 +34,7 @@ function App() {
   const [nanoText, setNanoText] = useState<string>("");
   const [showOutfitTransferWindow, setShowOutfitTransferWindow] =
     useState<boolean>(false);
+  const [isLoadingItems, setIsLoadingItems] = useState<boolean>(true);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     // Check localStorage first, then system preference
     const saved = localStorage.getItem("theme");
@@ -63,6 +64,7 @@ function App() {
   // Load clothing items from Supabase on component mount
   useEffect(() => {
     const loadClothingItems = async () => {
+      setIsLoadingItems(true);
       try {
         debugLog("Loading clothing items from Supabase...");
 
@@ -119,6 +121,8 @@ function App() {
         setTopsList([]);
         setBottomsList([]);
         debugLog("Falling back to empty arrays due to database error");
+      } finally {
+        setIsLoadingItems(false);
       }
     };
 
@@ -456,6 +460,7 @@ function App() {
               carousel={topsCarousel}
               category="tops"
               onImageError={handleImageError}
+              isLoading={isLoadingItems}
             />
 
             <ClothingCarousel
@@ -463,6 +468,7 @@ function App() {
               carousel={bottomsCarousel}
               category="bottoms"
               onImageError={handleImageError}
+              isLoading={isLoadingItems}
             />
 
             <ControlButtons
