@@ -34,6 +34,31 @@ function App() {
   const [nanoText, setNanoText] = useState<string>("");
   const [showOutfitTransferWindow, setShowOutfitTransferWindow] =
     useState<boolean>(false);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    // Check localStorage first, then system preference
+    const saved = localStorage.getItem("theme");
+    if (saved) {
+      return saved === "dark";
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+
+  // Apply theme to body
+  useEffect(() => {
+    if (isDarkMode) {
+      document.body.classList.add("dark-mode");
+      document.body.classList.remove("light-mode");
+    } else {
+      document.body.classList.add("light-mode");
+      document.body.classList.remove("dark-mode");
+    }
+    localStorage.setItem("theme", isDarkMode ? "dark" : "light");
+  }, [isDarkMode]);
+
+  // Toggle theme handler
+  const toggleTheme = () => {
+    setIsDarkMode((prev) => !prev);
+  };
 
   // Load clothing items from Supabase on component mount
   useEffect(() => {
@@ -403,9 +428,19 @@ function App() {
     [hasApiKey, canGenerate, generateOutfitTransfer]
   );
   return (
-    <div className="window fullscreen">
-      <div className="window-body" style={{ padding: 0 }}>
-        <div className="main-container">
+    <>
+      <button
+        className="theme-toggle"
+        onClick={toggleTheme}
+        title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        aria-label="Toggle theme"
+      >
+        {isDarkMode ? "☀️" : "🌙"}
+      </button>
+
+      <div className="window fullscreen">
+        <div className="window-body" style={{ padding: 0 }}>
+          <div className="main-container">
           {/* Left Column - Selection Area */}
           <div className="left-column">
             <UploadSection
@@ -465,7 +500,8 @@ function App() {
         onClose={() => setShowOutfitTransferWindow(false)}
         onUploadImage={handleOutfitTransfer}
       />
-    </div>
+      </div>
+    </>
   );
 }
 
