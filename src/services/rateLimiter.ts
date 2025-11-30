@@ -27,9 +27,9 @@ interface RateLimitStatus {
 
 // Constants
 const DEFAULT_CONFIG: RateLimitConfig = {
-  maxCalls: 5, // Max 5 calls
+  maxCalls: 1, // Max 1 call per minute (free tier has very strict limits)
   windowMs: 60000, // Per minute (60 seconds)
-  cooldownMs: 10000, // 10 second cooldown between calls
+  cooldownMs: 60000, // 60 second cooldown between calls (required for free tier)
 };
 
 class RateLimiter {

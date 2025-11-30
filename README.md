@@ -20,10 +20,13 @@ A cozy Windows 98-inspired desktop app that lets you choose tops and bottoms, up
    npm install
 
 2. **Add your .env file**
-```VITE_SUPABASE_URL=your_supabase_project_url
+```
+VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_GOOGLE_API_KEY=your_google_api_key
 ```
+
+<!-- Using LiteLLM proxy here (https://docs.litellm.ai/docs/pass_through/google_ai_studio#examples) instead as a substitute to Google API -->
 
 3. **Run the app**
 ```npm run dev```
@@ -69,6 +72,44 @@ for insert with check (true);
 ```
 
 Then click Run.
+
+#### 🐛 Debug: "Row violates row-level security" Error
+
+If you get a "new row violates row-level security" error when uploading images, you need to add storage policies for your buckets.
+
+**Option 1: Using SQL (Faster)**
+
+Go to **Storage → Policies** in your Supabase dashboard and run this SQL:
+
+```sql
+-- Allow public access for clothing-images bucket
+CREATE POLICY "Public access for clothing images" ON storage.objects
+  FOR ALL USING (bucket_id = 'clothing-images');
+
+-- Allow public access for generated-outfits bucket (if you created it)
+CREATE POLICY "Public access for generated outfits" ON storage.objects
+  FOR ALL USING (bucket_id = 'generated-outfits');
+```
+
+**Option 2: Using the Dashboard UI**
+
+In your Supabase dashboard:
+
+1. Go to **Storage** in the left sidebar
+2. Click on the **clothing-images** bucket
+3. Go to the **Policies** tab
+4. Click **New Policy**
+5. Choose **"For full customization"**
+6. Fill in:
+   - **Policy name**: `Public access`
+   - **Allowed operation**: Select **ALL** (or check INSERT, SELECT, UPDATE, DELETE)
+   - **Target roles**: Leave as `public` or blank
+   - **Policy command**: Choose **ALL**
+   - **USING expression**: Enter `bucket_id = 'clothing-images'`
+7. Click **Review** then **Save policy**
+8. Repeat steps 2-7 for the **generated-outfits** bucket (if you have one), using `bucket_id = 'generated-outfits'` in step 6
+
+This allows uploads, reads, and deletes using your anonymous key.
 
 ### Step 4: Upload Your Clothes
 

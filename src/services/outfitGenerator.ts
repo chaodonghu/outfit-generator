@@ -41,7 +41,10 @@ const DEFAULT_BODY_PATH = "/assets/model.png";
 const CACHE_PREFIX = "outfit_";
 
 const genAI = new GoogleGenAI({
-  apiKey: import.meta.env.VITE_GOOGLE_API_KEY || "",
+  apiKey: import.meta.env.VITE_LITE_LLM_KEY || "",
+  httpOptions: {
+    baseUrl: import.meta.env.VITE_LITE_LLM_BASE_URL || "",
+  },
 });
 
 function cacheKeyFor(
@@ -59,22 +62,45 @@ function buildPrompt(): string {
 
 // Intentionally unused experimental prompt helpers removed to reduce noise
 
-async function toBase64(path: string): Promise<string> {
+// Compress image to reduce payload size and avoid 413 errors
+async function compressImage(
+  path: string,
+  maxWidth: number = 800,
+  quality: number = 0.7
+): Promise<string> {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`Failed to load ${path}`);
   const blob = await res.blob();
-  // Use FileReader to avoid spreading a large Uint8Array into a single call (which overflows the call stack).
-  return await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string; // data:*/*;base64,<data>
-      const comma = result.indexOf(",");
-      if (comma === -1) return reject(new Error("Unexpected DataURL format"));
-      resolve(result.slice(comma + 1));
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      // Calculate new dimensions while maintaining aspect ratio
+      let width = img.width;
+      let height = img.height;
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+
+      // Create canvas and draw compressed image
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Failed to get canvas context"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Convert to base64 with compression (using JPEG for better compression)
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      const base64 = dataUrl.split(",")[1];
+      resolve(base64);
     };
-    reader.onerror = () =>
-      reject(reader.error || new Error("Failed to read blob"));
-    reader.readAsDataURL(blob);
+    img.onerror = () => reject(new Error(`Failed to load image: ${path}`));
+    img.src = URL.createObjectURL(blob);
   });
 }
 
@@ -98,13 +124,6 @@ async function generateOutfitInternal(
   topId?: string,
   bottomId?: string
 ): Promise<OutfitGenerationResult> {
-  if (!import.meta.env.VITE_GOOGLE_API_KEY) {
-    return {
-      success: false,
-      error: "Set VITE_GOOGLE_API_KEY and enable billing for image generation.",
-    };
-  }
-
   // Check Supabase cache first if we have IDs
   if (topId && bottomId) {
     const cachedUrl = await getCachedComposite(topId, bottomId);
@@ -144,26 +163,33 @@ async function generateOutfitInternal(
   }
 
   const [topB64, bottomB64, bodyB64] = await Promise.all([
-    toBase64(topPath),
-    toBase64(bottomPath),
-    toBase64(bodyPath),
+    compressImage(topPath, 800, 0.7),
+    compressImage(bottomPath, 800, 0.7),
+    compressImage(bodyPath, 800, 0.7),
   ]);
 
   const contents = [
     { text: prompt },
-    { inlineData: { mimeType: "image/png", data: topB64 } }, // image 1 top
-    { inlineData: { mimeType: "image/png", data: bottomB64 } }, // image 2 bottom
-    { inlineData: { mimeType: "image/png", data: bodyB64 } }, // image 3 body
+    { inlineData: { mimeType: "image/jpeg", data: topB64 } }, // image 1 top
+    { inlineData: { mimeType: "image/jpeg", data: bottomB64 } }, // image 2 bottom
+    { inlineData: { mimeType: "image/jpeg", data: bodyB64 } }, // image 3 body
   ];
+  console.log(
+    "Generating outfit with contents:!!!!!!!",
+    JSON.stringify(contents)
+  );
 
   let resp;
   let attempt = 0;
   const maxAttempts = 3;
   while (true) {
     try {
+      console.log("gen ai model!!!!!!!", genAI);
       resp = await genAI.models.generateContent({ model: MODEL, contents });
+      console.log("resp!!!!!!!", resp);
       break;
     } catch (err: any) {
+      console.log("err!!!!!!!", err);
       if (!isQuotaError(err) || attempt >= maxAttempts - 1) {
         const msg =
           typeof err?.message === "string" ? err.message : JSON.stringify(err);
@@ -236,11 +262,11 @@ async function generateNanoOutfitInternal(
     return { success: true, imageUrl: dataUrl };
   }
 
-  const bodyB64 = await toBase64(bodyPath);
+  const bodyB64 = await compressImage(bodyPath, 800, 0.7);
 
   const contents = [
     { text: customPrompt },
-    { inlineData: { mimeType: "image/png", data: bodyB64 } }, // model image
+    { inlineData: { mimeType: "image/jpeg", data: bodyB64 } }, // model image
   ];
 
   let resp;
@@ -315,14 +341,14 @@ async function generateOutfitTransferInternal(
   }
 
   const [bodyB64, inspirationB64] = await Promise.all([
-    toBase64(bodyPath),
-    toBase64(inspirationImagePath),
+    compressImage(bodyPath, 800, 0.7),
+    compressImage(inspirationImagePath, 800, 0.7),
   ]);
 
   const contents = [
     { text: transferPrompt },
-    { inlineData: { mimeType: "image/png", data: bodyB64 } }, // image 1 - model
-    { inlineData: { mimeType: "image/png", data: inspirationB64 } }, // image 2 - inspiration
+    { inlineData: { mimeType: "image/jpeg", data: bodyB64 } }, // image 1 - model
+    { inlineData: { mimeType: "image/jpeg", data: inspirationB64 } }, // image 2 - inspiration
   ];
 
   let resp;

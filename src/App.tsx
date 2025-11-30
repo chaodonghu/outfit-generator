@@ -38,7 +38,6 @@ function App() {
     useState<boolean>(false);
 
   // Load clothing items from Supabase on component mount
-  // This is so that you can do this and then you can styill fo this  and this is other this
   useEffect(() => {
     const loadClothingItems = async () => {
       try {
@@ -281,7 +280,7 @@ function App() {
 
   // Progress animation effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
 
     if (isGenerating) {
       setGenerationProgress(0);
