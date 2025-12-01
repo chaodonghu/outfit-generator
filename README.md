@@ -1,14 +1,8 @@
-# 👋 Hi there  
-
-I’m **Sarah** — [YouTube](https://www.youtube.com/@sarahliyt) | [Instagram](https://instagram.com/sarahli.mp3)
-
-**Outfit98** is a nostalgic Windows 98–style outfit picker. Try it, remix it, and enjoy the retro vibes.  
-
 ---
 
 ## 🧠 What It Is  
 
-A cozy Windows 98-inspired desktop app that lets you choose tops and bottoms, upload your own clothes, and see AI-generated outfit previews.  
+A desktop app that lets you choose tops and bottoms, upload your own clothes, and see AI-generated outfit previews.  
 
 ---
 
@@ -122,7 +116,7 @@ If items don’t show, double-check that your bucket is public and the table pol
 
 ### 🤖 AI Outfit Previews 
 
-Outfit98 uses the Google Generative AI API to create realistic outfit previews.
+Outfit Generator uses the Google Generative AI API to create realistic outfit previews.
 This feature is required for the app to work properly.
 
 Important:
@@ -158,9 +152,5 @@ Electron · React · TypeScript · Vite · 98.css · Supabase · Google Gemini A
 
 ---
 
-###  🎬 Watch the Build
-
-Watch on YouTube
-
-Follow for more cozy coding projects → @sarahli.mp3
+Inspired and forked from → @sarahli.mp3
 
