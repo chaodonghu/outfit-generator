@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, ChangeEvent } from "react";
 
 interface OutfitTransferWindowProps {
   show: boolean;
@@ -17,7 +17,7 @@ export function OutfitTransferWindow({
 
   if (!show) return null;
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setUploadedImage(file);
@@ -63,8 +63,6 @@ export function OutfitTransferWindow({
       <div className="title-bar">
         <div className="title-bar-text">Outfit Transfer</div>
         <div className="title-bar-controls">
-          <button aria-label="Minimize"></button>
-          <button aria-label="Maximize"></button>
           <button aria-label="Close" onClick={handleClose}></button>
         </div>
       </div>

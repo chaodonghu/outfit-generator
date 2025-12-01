@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import "98.css/dist/98.css";
 import { useCarousel } from "./hooks/useCarousel";
 import { useOutfitGeneration } from "./hooks/useOutfitGeneration";
 import {
@@ -11,7 +10,6 @@ import { rateLimiter } from "./services/rateLimiter";
 import { LocalClothingItem, RateLimitResult } from "./types";
 
 // Import components
-import { MenuBar } from "./components/MenuBar";
 import { UploadSection } from "./components/UploadSection";
 import { ClothingCarousel } from "./components/ClothingCarousel";
 import { ControlButtons } from "./components/ControlButtons";
@@ -36,10 +34,38 @@ function App() {
   const [nanoText, setNanoText] = useState<string>("");
   const [showOutfitTransferWindow, setShowOutfitTransferWindow] =
     useState<boolean>(false);
+  const [isLoadingItems, setIsLoadingItems] = useState<boolean>(true);
+  const [modelImageUrl, setModelImageUrl] = useState<string>("/assets/model.png");
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    // Check localStorage first, then system preference
+    const saved = localStorage.getItem("theme");
+    if (saved) {
+      return saved === "dark";
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+
+  // Apply theme to body
+  useEffect(() => {
+    if (isDarkMode) {
+      document.body.classList.add("dark-mode");
+      document.body.classList.remove("light-mode");
+    } else {
+      document.body.classList.add("light-mode");
+      document.body.classList.remove("dark-mode");
+    }
+    localStorage.setItem("theme", isDarkMode ? "dark" : "light");
+  }, [isDarkMode]);
+
+  // Toggle theme handler
+  const toggleTheme = () => {
+    setIsDarkMode((prev) => !prev);
+  };
 
   // Load clothing items from Supabase on component mount
   useEffect(() => {
     const loadClothingItems = async () => {
+      setIsLoadingItems(true);
       try {
         debugLog("Loading clothing items from Supabase...");
 
@@ -96,6 +122,8 @@ function App() {
         setTopsList([]);
         setBottomsList([]);
         debugLog("Falling back to empty arrays due to database error");
+      } finally {
+        setIsLoadingItems(false);
       }
     };
 
@@ -140,6 +168,35 @@ function App() {
   // Test connection function
 
   // Debug data mismatch function
+
+  // Handle model image upload
+  const handleModelUpload = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+
+    input.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        // Create a data URL for immediate preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result as string;
+          setModelImageUrl(dataUrl);
+          debugLog("Model image uploaded:", file.name);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    input.click();
+  }, []);
+
+  // Reset model to default
+  const handleResetModel = useCallback(() => {
+    setModelImageUrl("/assets/model.png");
+    debugLog("Model image reset to default");
+  }, []);
 
   // Handle file upload
   const handleFileUpload = useCallback(
@@ -266,7 +323,7 @@ function App() {
 
       // Reset progress and start generation
       setGenerationProgress(0);
-      await generateOutfit(topItem, bottomItem);
+      await generateOutfit(topItem, bottomItem, modelImageUrl);
     }
   }, [
     canGenerate,
@@ -276,6 +333,7 @@ function App() {
     previewBottom,
     topsList,
     bottomsList,
+    modelImageUrl,
   ]);
 
   // Progress animation effect
@@ -373,12 +431,12 @@ function App() {
       debugLog("Nano styling with occasion:", occasionText);
 
       // Use the hook's generateNanoOutfit method
-      await generateNanoOutfit(occasionText);
+      await generateNanoOutfit(occasionText, modelImageUrl);
     } catch (error: any) {
       console.error("Error in nano styling:", error);
       // Error handling is already done in the hook
     }
-  }, [nanoText, hasApiKey, canGenerate, generateNanoOutfit]);
+  }, [nanoText, hasApiKey, canGenerate, generateNanoOutfit, modelImageUrl]);
 
   // Handle outfit transfer
   const handleOutfitTransfer = useCallback(
@@ -396,40 +454,28 @@ function App() {
 
       try {
         debugLog("Starting outfit transfer with file:", file.name);
-        await generateOutfitTransfer(file);
+        await generateOutfitTransfer(file, modelImageUrl);
       } catch (error: any) {
         console.error("Error in outfit transfer:", error);
         // Error handling is already done in the hook
       }
     },
-    [hasApiKey, canGenerate, generateOutfitTransfer]
+    [hasApiKey, canGenerate, generateOutfitTransfer, modelImageUrl]
   );
   return (
-    <div
-      className="window"
-      style={{ width: "100vw", height: "100vh", margin: 0 }}
-    >
-      <div className="title-bar">
-        <div className="title-bar-text">What should I wear today?</div>
-        <div className="title-bar-controls">
-          <button aria-label="Minimize"></button>
-          <button aria-label="Maximize"></button>
-          <button aria-label="Close"></button>
-        </div>
-      </div>
-      <div
-        className="window-body"
-        style={{
-          padding: 0,
-          height: "calc(100vh - 36px)",
-          background: "#c0c0c0",
-        }}
+    <>
+      <button
+        className="theme-toggle"
+        onClick={toggleTheme}
+        title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        aria-label="Toggle theme"
       >
-        <MenuBar />
-        <div
-          className="main-container"
-          style={{ width: "100%", height: "calc(100% - 32px)" }}
-        >
+        {isDarkMode ? "☀️" : "🌙"}
+      </button>
+
+      <div className="window fullscreen">
+        <div className="window-body" style={{ padding: 0 }}>
+          <div className="main-container">
           {/* Left Column - Selection Area */}
           <div className="left-column">
             <UploadSection
@@ -445,6 +491,7 @@ function App() {
               carousel={topsCarousel}
               category="tops"
               onImageError={handleImageError}
+              isLoading={isLoadingItems}
             />
 
             <ClothingCarousel
@@ -452,6 +499,7 @@ function App() {
               carousel={bottomsCarousel}
               category="bottoms"
               onImageError={handleImageError}
+              isLoading={isLoadingItems}
             />
 
             <ControlButtons
@@ -472,6 +520,9 @@ function App() {
             error={error}
             generatedImage={generatedImage}
             onClearGeneratedImage={clearGeneratedImage}
+            modelImageUrl={modelImageUrl}
+            onUploadModel={handleModelUpload}
+            onResetModel={handleResetModel}
           />
         </div>
       </div>
@@ -489,7 +540,8 @@ function App() {
         onClose={() => setShowOutfitTransferWindow(false)}
         onUploadImage={handleOutfitTransfer}
       />
-    </div>
+      </div>
+    </>
   );
 }
 

@@ -11,6 +11,7 @@ interface ClothingCarouselProps {
   carousel: CarouselControls;
   category: "tops" | "bottoms";
   onImageError: (imageUrl: string) => void;
+  isLoading?: boolean;
 }
 
 export function ClothingCarousel({
@@ -18,6 +19,7 @@ export function ClothingCarousel({
   carousel,
   category,
   onImageError,
+  isLoading = false,
 }: ClothingCarouselProps) {
   const isTops = category === "tops";
   const sectionClass = isTops
@@ -33,10 +35,15 @@ export function ClothingCarousel({
           onClick={carousel.prev}
           title={`Previous ${category.slice(0, -1)}`}
           aria-label={`Previous ${category.slice(0, -1)}`}
-          disabled={items.length === 0}
+          disabled={items.length === 0 || isLoading}
         />
         <div className="clothes-window">
-          {items.length > 0 && items[carousel.index] ? (
+          {isLoading ? (
+            <div className="loading-indicator">
+              <div className="loading-spinner" />
+              <div style={{ fontSize: "12px" }}>Loading {category}...</div>
+            </div>
+          ) : items.length > 0 && items[carousel.index] ? (
             <img
               src={items[carousel.index].imageUrl}
               alt={items[carousel.index].name}
@@ -47,17 +54,18 @@ export function ClothingCarousel({
             <div
               style={{
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 height: "100%",
-                color: "#666",
-                fontSize: "14px",
+                color: "var(--macos-text-secondary)",
+                fontSize: "13px",
                 textAlign: "center",
+                gap: "8px",
               }}
             >
-              {emptyMessage}
-              <br />
-              Click folder to upload
+              <div>{emptyMessage}</div>
+              <div style={{ fontSize: "11px" }}>Click folder to upload</div>
             </div>
           )}
         </div>
@@ -66,7 +74,7 @@ export function ClothingCarousel({
           onClick={carousel.next}
           title={`Next ${category.slice(0, -1)}`}
           aria-label={`Next ${category.slice(0, -1)}`}
-          disabled={items.length === 0}
+          disabled={items.length === 0 || isLoading}
         />
       </div>
     </div>

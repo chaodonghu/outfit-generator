@@ -1,3 +1,55 @@
+/* ===========================
+   macOS Design System
+   =========================== */
+
+:root {
+  /* macOS Color Palette - Light Mode */
+  --macos-bg: #f5f5f7;
+  --macos-window-bg: #ffffff;
+  --macos-border: #d1d1d6;
+  --macos-text: #1d1d1f;
+  --macos-text-secondary: #86868b;
+  --macos-blue: #007aff;
+  --macos-blue-hover: #0051d5;
+  --macos-blue-active: #004ecb;
+  --macos-red: #ff3b30;
+  --macos-yellow: #ffcc00;
+  --macos-green: #28cd41;
+  --macos-shadow: rgba(0, 0, 0, 0.1);
+  --macos-shadow-lg: rgba(0, 0, 0, 0.15);
+  
+  /* Typography */
+  --font-primary: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===========================
+   Base Styles
+   =========================== */
+
+* {
+  box-sizing: border-box;
+}
+
 html,
 body,
 #root {
@@ -10,145 +62,361 @@ body,
 body {
   margin: 0;
   padding: 0;
-  background-color: #c0c0c0; /* Fallback */
-  background: #c0c0c0;
+  background: var(--macos-bg);
   width: 100vw;
   height: 100vh;
-  overflow: hidden; /* Prevent scrolling */
-  font-family: "MS Sans Serif", "Microsoft Sans Serif", "Segoe UI", sans-serif;
-  -webkit-font-smoothing: none;
-  font-smooth: never;
-  image-rendering: pixelated;
+  overflow: hidden;
+  font-family: var(--font-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--macos-text);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-#root,
-.outfit-window {
-  width: 100%;
-  height: 100%;
+#root {
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
-  background: transparent; /* Ensure transparency */
 }
 
-/* Main layout container */
+/* ===========================
+   Window Styles
+   =========================== */
+
+.window {
+  background: var(--macos-window-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px var(--macos-shadow-lg), 
+              0 0 0 0.5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.window.fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* Title Bar */
+.title-bar {
+  height: 52px;
+  background: var(--macos-window-bg);
+  border-bottom: 1px solid var(--macos-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--spacing-lg);
+  position: relative;
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+}
+
+.title-bar-text {
+  flex: 1;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--macos-text);
+  letter-spacing: -0.01em;
+}
+
+.title-bar-controls {
+  position: absolute;
+  left: var(--spacing-md);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: var(--spacing-sm);
+  -webkit-app-region: no-drag;
+}
+
+.title-bar-controls button {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  padding: 0;
+}
+
+.title-bar-controls button:nth-child(1) {
+  background: var(--macos-red);
+}
+
+.title-bar-controls button:nth-child(2) {
+  background: var(--macos-yellow);
+}
+
+.title-bar-controls button:nth-child(3) {
+  background: var(--macos-green);
+}
+
+.title-bar-controls button:hover {
+  filter: brightness(0.9);
+}
+
+.title-bar-controls button:active {
+  filter: brightness(0.8);
+}
+
+/* Window Body */
+.window-body {
+  flex: 1;
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--macos-bg);
+}
+
+.window-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.window-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.window-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.window-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ===========================
+   Button Styles
+   =========================== */
+
+button {
+  font-family: var(--font-primary);
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--macos-window-bg);
+  color: var(--macos-text);
+  border: 1px solid var(--macos-border);
+  letter-spacing: -0.01em;
+}
+
+button:hover {
+  background: #f9f9f9;
+  border-color: #c0c0c0;
+}
+
+button:active {
+  background: #ebebeb;
+  transform: scale(0.98);
+}
+
+button.default,
+button.primary {
+  background: var(--macos-blue);
+  color: white;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
+}
+
+button.default:hover,
+button.primary:hover {
+  background: var(--macos-blue-hover);
+}
+
+button.default:active,
+button.primary:active {
+  background: var(--macos-blue-active);
+  box-shadow: 0 1px 2px rgba(0, 122, 255, 0.3);
+}
+
+button:disabled,
+button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.3);
+}
+
+/* ===========================
+   Form Elements
+   =========================== */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  font-family: var(--font-primary);
+  font-size: 13px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--macos-border);
+  border-radius: var(--radius-sm);
+  background: var(--macos-window-bg);
+  color: var(--macos-text);
+  transition: all var(--transition-fast);
+  width: 100%;
+  resize: vertical;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--macos-blue);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+}
+
+textarea {
+  min-height: 80px;
+  line-height: 1.5;
+}
+
+.field-row-stacked {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+/* ===========================
+   Layout Styles
+   =========================== */
+
 .main-container {
   display: flex;
+  flex-direction: row;
   width: 100%;
   height: 100%;
-  padding: 10px 20px 20px 20px;
+  gap: var(--spacing-2xl);
+  padding: var(--spacing-xl);
   box-sizing: border-box;
-  gap: 20px; /* Increased gap to better balance the columns */
 }
 
-/* Left column - Selection area */
 .left-column {
-  width: 50%; /* Made equal to right column */
+  flex: 0 0 45%;
+  max-width: 45%;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin-top: 10px;
+  gap: var(--spacing-lg);
+  min-width: 0;
 }
 
-/* Right column - Outfit preview */
 .right-column {
-  width: 50%; /* Made equal to left column */
+  flex: 0 0 50%;
+  max-width: 50%;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding-top: 0px;
-  margin-top: -120px;
+  min-width: 0;
 }
 
-.outfit-preview {
-  width: 100%;
-  height: 100%;
-  background-image: url("/assets/outfit window.png");
-  background-size: 75%;
-  background-repeat: no-repeat;
-  background-position: center center;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* ===========================
+   Section Styles
+   =========================== */
 
-/* Section containers */
 .section-container {
-  position: relative;
-  background-image: url("/assets/tops section.png");
-  background-size: 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  padding: 20px;
-  min-height: 200px;
+  background: var(--macos-window-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--macos-border);
+  padding: var(--spacing-xl);
+  box-shadow: 0 2px 8px var(--macos-shadow);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: var(--spacing-lg);
+  transition: all var(--transition-base);
 }
 
-.bottoms-section {
-  background-image: url("/assets/bottoms section.png");
+.section-container:hover {
+  box-shadow: 0 4px 12px var(--macos-shadow-lg);
 }
 
-/* Clothes window inside section */
+.section-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--macos-text);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+/* ===========================
+   Clothing Display
+   =========================== */
+
 .clothes-window {
-  width: 160px;
-  height: 160px;
-  background-image: url("/assets/clothes-window.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  position: relative;
+  width: 280px;
+  height: 240px;
+  background: #fafafa;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--macos-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 30px 0 20px 0;
+  position: relative;
+  transition: all var(--transition-base);
+  overflow: hidden;
 }
 
-/* Clothing item display */
+.clothes-window:hover {
+  border-color: var(--macos-blue);
+}
+
 .clothing-item {
-  max-width: 130px;
-  max-height: 130px;
+  max-width: 250px;
+  max-height: 240px;
   object-fit: contain;
-  image-rendering: pixelated;
+  image-rendering: auto;
+  -webkit-user-drag: none;
 }
 
-/* Navigation buttons */
+/* ===========================
+   Navigation Buttons
+   =========================== */
+
 .nav-buttons {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
-  margin: 20px 0 10px 0;
-  gap: 20px;
+  gap: var(--spacing-xl);
 }
 
 .nav-button {
-  width: 40px;
-  height: 40px;
-  background: #c0c0c0;
-  border: 2px outset #c0c0c0;
+  width: 36px;
+  height: 36px;
+  background: var(--macos-window-bg);
+  border: 1px solid var(--macos-border);
+  border-radius: 50%;
   cursor: pointer;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  font-weight: bold;
-  color: #000;
-  min-width: 40px;
-  min-height: 40px;
+  font-size: 16px;
+  color: var(--macos-text);
+  transition: all var(--transition-fast);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .nav-button:hover {
-  background: #d4d0c8;
+  background: #f9f9f9;
+  border-color: var(--macos-blue);
+  color: var(--macos-blue);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 .nav-button:active {
-  border: 2px inset #c0c0c0;
-  transform: translateY(1px);
+  transform: scale(0.95);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .left-button::before {
@@ -159,71 +427,94 @@ body {
   content: "▶";
 }
 
-/* Bottom buttons */
+/* ===========================
+   Control Buttons
+   =========================== */
+
 .bottom-buttons {
   display: flex;
-  justify-content: center; /* Changed from space-between to center */
-  gap: 30px; /* Small gap between buttons */
-  margin-top: 20px;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) 0;
 }
 
 .bottom-button {
-  background: none;
+  background: var(--macos-blue);
+  color: white;
   border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-md) var(--spacing-xl);
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  padding: 0;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  image-rendering: pixelated;
-  min-width: 120px;
-  min-height: 45px;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+  min-height: 40px;
 }
 
 .bottom-button:hover {
-  opacity: 0.8;
+  background: var(--macos-blue-hover);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.35);
+  transform: translateY(-1px);
 }
 
 .bottom-button:active {
-  transform: translateY(1px);
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.3);
 }
 
-.random-button {
-  background-image: url("/assets/random-button.png");
+/* ===========================
+   Outfit Preview
+   =========================== */
+
+.outfit-preview {
+  width: 100%;
+  max-width: 500px;
+  aspect-ratio: 1;
+  background: var(--macos-window-bg);
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--macos-border);
+  box-shadow: 0 8px 24px var(--macos-shadow-lg);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: all var(--transition-base);
 }
 
-.select-button {
-  background-image: url("/assets/select-button.png");
+.outfit-preview:hover {
+  box-shadow: 0 12px 32px var(--macos-shadow-lg);
 }
 
-/* Section labels */
-.section-label {
-  font-size: 14px;
-  font-weight: bold;
-  color: #000;
-  margin-bottom: 10px;
-  text-align: center;
+.outfit-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
-/* ===== AI GENERATION STYLES ===== */
 
-/* Loading indicator */
+/* ===========================
+   Loading States
+   =========================== */
+
 .loading-indicator {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  color: #000;
-  font-size: 14px;
+  gap: var(--spacing-lg);
+  color: var(--macos-text-secondary);
+  font-size: 13px;
+  padding: var(--spacing-2xl);
 }
 
 .loading-spinner {
-  width: 30px;
-  height: 30px;
-  border: 3px solid #c0c0c0;
-  border-top: 3px solid #000;
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e0e0e0;
+  border-top: 3px solid var(--macos-blue);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @keyframes spin {
@@ -235,127 +526,381 @@ body {
   }
 }
 
-/* Error message */
+/* ===========================
+   Error & Messages
+   =========================== */
+
 .error-message {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  color: #000;
-  font-size: 14px;
+  gap: var(--spacing-md);
+  color: var(--macos-red);
+  font-size: 13px;
   text-align: center;
-  padding: 10px;
+  padding: var(--spacing-xl);
+  background: #fff5f5;
+  border-radius: var(--radius-md);
+  border: 1px solid #ffdddd;
 }
 
-.error-message button {
-  background: #c0c0c0;
-  border: 2px outset #c0c0c0;
-  padding: 5px 10px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.error-message button:hover {
-  background: #d0d0d0;
-}
-
-.error-message button:active {
-  border: 2px inset #c0c0c0;
-}
-
-/* API key requirement message */
 .api-key-message {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  color: #000;
-  font-size: 14px;
+  gap: var(--spacing-md);
+  color: var(--macos-text-secondary);
+  font-size: 13px;
   text-align: center;
-  padding: 20px;
+  padding: var(--spacing-2xl);
 }
 
-/* Composite image notice */
 .composite-notice {
   position: absolute;
-  bottom: 10px;
+  bottom: var(--spacing-lg);
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(192, 192, 192, 0.9);
-  border: 2px outset #c0c0c0;
-  padding: 5px 10px;
-  font-size: 12px;
-  color: #000;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--macos-border);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: 11px;
+  color: var(--macos-text-secondary);
+  box-shadow: 0 2px 8px var(--macos-shadow);
   z-index: 20;
 }
 
-/* Disabled button state */
-.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.disabled:hover {
-  opacity: 0.5;
-}
-
-.disabled:active {
-  transform: none;
-}
-
-/* Placeholder message */
 .placeholder-message {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666;
-  font-size: 14px;
+  color: var(--macos-text-secondary);
+  font-size: 13px;
   text-align: center;
-  padding: 20px;
+  padding: var(--spacing-2xl);
 }
 
-/* Folder button */
+/* ===========================
+   Folder Button
+   =========================== */
+
 .folder-button {
   position: absolute;
-  bottom: 40px;
-  right: 20px;
-  width: 30px;
-  height: 30px;
-  background: none;
-  border: none;
+  bottom: var(--spacing-xl);
+  right: var(--spacing-xl);
+  width: 40px;
+  height: 40px;
+  background: var(--macos-window-bg);
+  border: 1px solid var(--macos-border);
+  border-radius: 50%;
   cursor: pointer;
   padding: 0;
-  background-image: url("/assets/Folder.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  image-rendering: pixelated;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px var(--macos-shadow);
+  transition: all var(--transition-fast);
+}
+
+.folder-button::before {
+  content: "📁";
+  font-size: 20px;
 }
 
 .folder-button:hover {
-  opacity: 0.8;
+  background: #f9f9f9;
+  border-color: var(--macos-blue);
+  box-shadow: 0 4px 12px var(--macos-shadow-lg);
+  transform: translateY(-2px);
 }
 
 .folder-button:active {
-  transform: translateY(1px);
+  transform: translateY(0) scale(0.95);
 }
 
-/* Make the root 98.css window fill the screen exactly */
-.window {
-  position: fixed;
-  inset: 0; /* top:0 right:0 bottom:0 left:0 */
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  box-sizing: border-box; /* include borders in total size */
+/* ===========================
+   Model Upload Controls
+   =========================== */
+
+.model-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
 }
 
-/* Use flex so the title bar stays fixed and body fills the rest */
-.window > .window-body {
+.model-controls button {
+  padding: 8px 16px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--macos-border);
+  box-shadow: 0 2px 8px var(--macos-shadow);
+}
+
+body.dark-mode .model-controls button {
+  background: rgba(42, 42, 42, 0.95);
+}
+
+/* ===========================
+   Upload Section
+   =========================== */
+
+.upload-section {
+  background: var(--macos-window-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--macos-border);
+  padding: var(--spacing-lg);
+  box-shadow: 0 2px 8px var(--macos-shadow);
+}
+
+.upload-menu {
+  position: absolute;
+  background: var(--macos-window-bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--macos-border);
+  box-shadow: 0 4px 16px var(--macos-shadow-lg);
+  padding: var(--spacing-xs);
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0; /* prevent overflow from flex children */
+  gap: 2px;
+  min-width: 120px;
+  z-index: 1000;
+  animation: fadeIn var(--transition-fast);
+}
+
+.upload-menu button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 12px;
+  text-align: left;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--macos-text);
+  transition: all var(--transition-fast);
+}
+
+.upload-menu button:hover {
+  background: var(--macos-blue);
+  color: white;
+}
+
+/* ===========================
+   Progress Bar (macOS Style)
+   =========================== */
+
+.progress-indicator {
+  width: 100%;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-indicator-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--macos-blue) 0%, #4da6ff 100%);
+  border-radius: 4px;
+  transition: width var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-indicator-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ===========================
+   Field Border (macOS Style)
+   =========================== */
+
+.field-border {
+  background: var(--macos-window-bg);
+  border: 1px solid var(--macos-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  box-shadow: 0 2px 8px var(--macos-shadow);
+}
+
+/* ===========================
+   Status Bar
+   =========================== */
+
+.status-bar {
+  position: fixed;
+  bottom: var(--spacing-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px);
+  color: white;
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 9999;
+  animation: fadeIn var(--transition-base);
+}
+
+/* ===========================
+   Utility Classes
+   =========================== */
+
+.disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+/* ===========================
+   Animations
+   =========================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn var(--transition-slow) ease-out;
+}
+
+/* ===========================
+   Responsive Adjustments
+   =========================== */
+
+@media (max-width: 768px) {
+  .main-container {
+    flex-direction: column;
+  }
+  
+  .left-column {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+  
+  .right-column {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
+/* ===========================
+   Dark Mode Support
+   =========================== */
+
+body.dark-mode {
+  --macos-bg: #1e1e1e;
+  --macos-window-bg: #2a2a2a;
+  --macos-border: #3a3a3a;
+  --macos-text: #f5f5f7;
+  --macos-text-secondary: #98989d;
+  --macos-shadow: rgba(0, 0, 0, 0.3);
+  --macos-shadow-lg: rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode .clothes-window {
+  background: #1e1e1e;
+}
+
+body.dark-mode button:not(.default):not(.primary) {
+  background: #3a3a3a;
+  color: var(--macos-text);
+}
+
+body.dark-mode button:not(.default):not(.primary):hover {
+  background: #4a4a4a;
+}
+
+/* Auto dark mode based on system preference */
+@media (prefers-color-scheme: dark) {
+  body:not(.light-mode) {
+    --macos-bg: #1e1e1e;
+    --macos-window-bg: #2a2a2a;
+    --macos-border: #3a3a3a;
+    --macos-text: #f5f5f7;
+    --macos-text-secondary: #98989d;
+    --macos-shadow: rgba(0, 0, 0, 0.3);
+    --macos-shadow-lg: rgba(0, 0, 0, 0.5);
+  }
+  
+  body:not(.light-mode) .clothes-window {
+    background: #1e1e1e;
+  }
+  
+  body:not(.light-mode) button:not(.default):not(.primary) {
+    background: #3a3a3a;
+    color: var(--macos-text);
+  }
+  
+  body:not(.light-mode) button:not(.default):not(.primary):hover {
+    background: #4a4a4a;
+  }
+}
+
+/* ===========================
+   Theme Toggle Button
+   =========================== */
+
+.theme-toggle {
+  position: fixed;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  width: 40px;
+  height: 40px;
+  background: var(--macos-window-bg);
+  border: 1px solid var(--macos-border);
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 2px 8px var(--macos-shadow);
+  transition: all var(--transition-fast);
+  z-index: 1000;
+}
+
+.theme-toggle:hover {
+  box-shadow: 0 4px 12px var(--macos-shadow-lg);
+  transform: scale(1.05);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
 }
