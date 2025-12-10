@@ -41,7 +41,7 @@ export interface UseOutfitGenerationReturn {
   error: string | null;
   apiRequired: boolean;
   isComposite: boolean;
-  generateOutfit: (top: ClothingItem, bottom: ClothingItem, modelImageUrl?: string) => Promise<void>;
+  generateOutfit: (top: ClothingItem, bottom: ClothingItem, modelImageUrl?: string, shoes?: ClothingItem) => Promise<void>;
   generateNanoOutfit: (occasion: string, modelImageUrl?: string) => Promise<void>;
   generateOutfitTransfer: (inspirationFile: File, modelImageUrl?: string) => Promise<void>;
   clearGeneratedImage: () => void;

@@ -10,10 +10,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Database types
+export type ClothingCategory = "tops" | "bottoms" | "shoes";
+
 export interface ClothingItem {
   id: string;
   name: string;
-  category: "tops" | "bottoms";
+  category: ClothingCategory;
   image_url: string;
   created_at: string;
   updated_at: string;
@@ -23,6 +25,7 @@ export interface GeneratedOutfit {
   id: string;
   top_id: string;
   bottom_id: string;
+  shoe_id?: string;
   generated_image_url: string;
   created_at: string;
   updated_at: string;
@@ -34,6 +37,7 @@ export const STORAGE_BUCKETS = {
   GENERATED: "generated-outfits",
 } as const;
 
+// ALLOW drag and drop of images from the file explorer
 // Storage utility functions
 export async function uploadImage(
   bucket: keyof typeof STORAGE_BUCKETS,
@@ -88,17 +92,28 @@ export function getImageUrl(
 }
 
 // Database utility functions
-export function pairKey(topId: string, bottomId: string) {
-  return `${topId}__${bottomId}`;
+export function pairKey(topId: string, bottomId: string, shoeId?: string) {
+  return shoeId ? `${topId}__${bottomId}__${shoeId}` : `${topId}__${bottomId}`;
 }
 
-export async function getCachedComposite(topId: string, bottomId: string) {
-  const { data, error } = await supabase
+export async function getCachedComposite(
+  topId: string,
+  bottomId: string,
+  shoeId?: string
+) {
+  let query = supabase
     .from("generated_outfits")
     .select("generated_image_url")
     .eq("top_id", topId)
-    .eq("bottom_id", bottomId)
-    .maybeSingle();
+    .eq("bottom_id", bottomId);
+
+  if (shoeId) {
+    query = query.eq("shoe_id", shoeId);
+  } else {
+    query = query.is("shoe_id", null);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     console.error("Error fetching cached composite:", error);
@@ -111,11 +126,13 @@ export async function getCachedComposite(topId: string, bottomId: string) {
 export async function saveCachedComposite(
   topId: string,
   bottomId: string,
-  generatedImageUrl: string
+  generatedImageUrl: string,
+  shoeId?: string
 ) {
   const { error } = await supabase.from("generated_outfits").upsert({
     top_id: topId,
     bottom_id: bottomId,
+    shoe_id: shoeId || null,
     generated_image_url: generatedImageUrl,
   });
 
@@ -126,7 +143,7 @@ export async function saveCachedComposite(
 }
 
 export async function getClothingItems(
-  category: "tops" | "bottoms"
+  category: ClothingCategory
 ): Promise<ClothingItem[]> {
   const { data, error } = await supabase
     .from("clothing_items")
@@ -144,7 +161,7 @@ export async function getClothingItems(
 
 export async function addClothingItem(
   name: string,
-  category: "tops" | "bottoms",
+  category: ClothingCategory,
   imageFile: File
 ): Promise<ClothingItem> {
   // Generate unique filename
