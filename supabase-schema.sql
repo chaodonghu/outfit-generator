@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS clothing_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  category VARCHAR(50) NOT NULL CHECK (category IN ('tops', 'bottoms')),
+  category VARCHAR(50) NOT NULL CHECK (category IN ('tops', 'bottoms', 'shoes')),
   image_url TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -13,10 +13,11 @@ CREATE TABLE IF NOT EXISTS generated_outfits (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   top_id UUID NOT NULL REFERENCES clothing_items(id) ON DELETE CASCADE,
   bottom_id UUID NOT NULL REFERENCES clothing_items(id) ON DELETE CASCADE,
+  shoe_id UUID REFERENCES clothing_items(id) ON DELETE CASCADE,
   generated_image_url TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(top_id, bottom_id)
+  UNIQUE(top_id, bottom_id, shoe_id)
 );
 
 -- Create indexes for better performance

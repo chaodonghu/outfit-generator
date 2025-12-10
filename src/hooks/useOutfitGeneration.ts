@@ -37,7 +37,7 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
   }, []);
 
   const generateOutfit = useCallback(
-    async (top: ClothingItem, bottom: ClothingItem, modelImageUrl?: string) => {
+    async (top: ClothingItem, bottom: ClothingItem, modelImageUrl?: string, shoes?: ClothingItem) => {
       if (inFlightRef.current) {
         console.warn(
           "⏳ Generate already in flight. Ignoring duplicate click."
@@ -48,10 +48,11 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
 
       // Use item IDs and model URL for cache key
       const modelKey = modelImageUrl || "default";
-      const key = `outfit::${top.id}::${bottom.id}::${modelKey}`;
+      const shoesKey = shoes ? `::${shoes.id}` : "";
+      const key = `outfit::${top.id}::${bottom.id}${shoesKey}::${modelKey}`;
       if (cacheRef.current.has(key)) {
         const cached = cacheRef.current.get(key)!;
-        console.log("♻️ Using cached result for", top.id, bottom.id);
+        console.log("♻️ Using cached result for", top.id, bottom.id, shoes?.id);
         setGeneratedImage(cached.url);
         setIsComposite(cached.isComposite);
         setError(null);
@@ -70,7 +71,7 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
         return;
       }
 
-      console.log("🤖 Starting outfit generation for:", top.id, bottom.id);
+      console.log("🤖 Starting outfit generation for:", top.id, bottom.id, shoes?.id || "no shoes");
       setIsGenerating(true);
       setError(null);
       setIsComposite(false);
@@ -88,7 +89,11 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
           await outfitGenerator.generateOutfit(
             top.imageUrl,
             bottom.imageUrl,
-            modelImageUrl || "/assets/model.png"
+            modelImageUrl || "/assets/model.png",
+            top.id,
+            bottom.id,
+            shoes?.imageUrl,
+            shoes?.id
           );
 
         if (result.success && result.imageUrl) {

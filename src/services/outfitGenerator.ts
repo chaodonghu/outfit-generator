@@ -21,7 +21,6 @@ function getRetryMsFromError(err: any, fallbackMs = 20000): number {
   return fallbackMs;
 }
 
-import { GoogleGenAI } from "@google/genai";
 import {
   getCachedComposite,
   saveCachedComposite,
@@ -36,27 +35,70 @@ export interface OutfitGenerationResult {
 }
 
 // Constants
-const MODEL = "gemini-2.5-flash-image-preview";
+const MODEL = "gemini-2.5-flash-image";
 const DEFAULT_BODY_PATH = "/assets/model.png";
 const CACHE_PREFIX = "outfit_";
 
-const genAI = new GoogleGenAI({
-  apiKey: import.meta.env.VITE_LITE_LLM_KEY || "",
-  httpOptions: {
-    baseUrl: import.meta.env.VITE_LITE_LLM_BASE_URL || "",
-  },
-});
+// Helper function to call Gemini API directly via fetch
+async function callGeminiAPI(contents: any[]) {
+  const baseUrl = import.meta.env.VITE_LITE_LLM_BASE_URL || "";
+  const apiKey = import.meta.env.VITE_LITE_LLM_KEY || "";
+  
+  if (!baseUrl || !apiKey) {
+    throw new Error("VITE_LITE_LLM_BASE_URL and VITE_LITE_LLM_KEY must be set");
+  }
+
+  // Format the URL based on your LiteLLM proxy format
+  // Adjust the project/location if needed for your setup
+  const url = `${baseUrl}/vertex_ai/v1/projects/zapai-dev/locations/us-east1/publishers/google/models/${MODEL}:generateContent`;
+  
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      contents: [{
+        role: "user",
+        parts: contents,
+      }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let errorJson;
+    try {
+      errorJson = JSON.parse(errorText);
+    } catch {
+      errorJson = { message: errorText };
+    }
+    throw {
+      status: response.status,
+      error: errorJson,
+      message: errorJson.message || errorText,
+    };
+  }
+
+  return await response.json();
+}
 
 function cacheKeyFor(
   topPath: string,
   bottomPath: string,
   bodyPath: string,
-  prompt: string
+  prompt: string,
+  shoePath?: string
 ): string {
-  return `${CACHE_PREFIX}${MODEL}|${topPath}|${bottomPath}|${bodyPath}|v1:${prompt.length}`;
+  const shoesPart = shoePath ? `|${shoePath}` : "";
+  return `${CACHE_PREFIX}${MODEL}|${topPath}|${bottomPath}${shoesPart}|${bodyPath}|v1:${prompt.length}`;
 }
 
-function buildPrompt(): string {
+function buildPrompt(includeShoes: boolean = false): string {
+  if (includeShoes) {
+    return "Create a new image by combining the elements from the provided images. Take the top clothing item from image 1, the bottom clothing item from image 2, and the shoes from image 3, and place them naturally onto the body in image 4 so it looks like the person is wearing the complete outfit. Fit to body shape and pose, preserve garment proportions and textures, match lighting and shadows, handle occlusion by hair and arms. CRITICAL: The background must be completely white (#FFFFFF) - do not use black, transparent, or any other background color. Replace any existing background with solid white. Do not change the person identity or add accessories.";
+  }
   return "Create a new image by combining the elements from the provided images. Take the top clothing item from image 1 and the bottom clothing item from image 2, and place them naturally onto the body in image 3 so it looks like the person is wearing the selected outfit. Fit to body shape and pose, preserve garment proportions and textures, match lighting and shadows, handle occlusion by hair and arms. CRITICAL: The background must be completely white (#FFFFFF) - do not use black, transparent, or any other background color. Replace any existing background with solid white. Do not change the person identity or add accessories.";
 }
 
@@ -122,18 +164,21 @@ async function generateOutfitInternal(
   bottomPath: string,
   bodyPath: string = DEFAULT_BODY_PATH,
   topId?: string,
-  bottomId?: string
+  bottomId?: string,
+  shoePath?: string,
+  shoeId?: string
 ): Promise<OutfitGenerationResult> {
   // Check Supabase cache first if we have IDs
   if (topId && bottomId) {
-    const cachedUrl = await getCachedComposite(topId, bottomId);
+    const cachedUrl = await getCachedComposite(topId, bottomId, shoeId);
     if (cachedUrl) {
       return { success: true, imageUrl: cachedUrl };
     }
   }
 
-  const prompt = buildPrompt();
-  const key = cacheKeyFor(topPath, bottomPath, bodyPath, prompt);
+  const includeShoes = Boolean(shoePath);
+  const prompt = buildPrompt(includeShoes);
+  const key = cacheKeyFor(topPath, bottomPath, bodyPath, prompt, shoePath);
 
   // simple in memory cache
   (window as any).__outfitCache =
@@ -145,12 +190,12 @@ async function generateOutfitInternal(
     // If we have IDs, save to Supabase storage
     if (topId && bottomId) {
       try {
-        const file = dataUrlToFile(
-          dataUrl,
-          `outfit_${topId}_${bottomId}_${Date.now()}.png`
-        );
+        const filename = shoeId 
+          ? `outfit_${topId}_${bottomId}_${shoeId}_${Date.now()}.png`
+          : `outfit_${topId}_${bottomId}_${Date.now()}.png`;
+        const file = dataUrlToFile(dataUrl, filename);
         const storageUrl = await uploadImage("GENERATED", file, file.name);
-        await saveCachedComposite(topId, bottomId, storageUrl);
+        await saveCachedComposite(topId, bottomId, storageUrl, shoeId);
         return { success: true, imageUrl: storageUrl };
       } catch (error) {
         console.error("Error saving to Supabase:", error);
@@ -162,18 +207,39 @@ async function generateOutfitInternal(
     return { success: true, imageUrl: dataUrl };
   }
 
-  const [topB64, bottomB64, bodyB64] = await Promise.all([
+  // Compress images (conditionally include shoes)
+  const compressionPromises = [
     compressImage(topPath, 800, 0.7),
     compressImage(bottomPath, 800, 0.7),
-    compressImage(bodyPath, 800, 0.7),
-  ]);
-
-  const contents = [
-    { text: prompt },
-    { inlineData: { mimeType: "image/jpeg", data: topB64 } }, // image 1 top
-    { inlineData: { mimeType: "image/jpeg", data: bottomB64 } }, // image 2 bottom
-    { inlineData: { mimeType: "image/jpeg", data: bodyB64 } }, // image 3 body
   ];
+  
+  if (includeShoes && shoePath) {
+    compressionPromises.push(compressImage(shoePath, 800, 0.7));
+  }
+  
+  compressionPromises.push(compressImage(bodyPath, 800, 0.7));
+  
+  const compressedImages = await Promise.all(compressionPromises);
+
+  // Build contents array
+  const contents = [{ text: prompt }];
+  
+  if (includeShoes && shoePath) {
+    const [topB64, bottomB64, shoesB64, bodyB64] = compressedImages;
+    contents.push(
+      { inlineData: { mimeType: "image/jpeg", data: topB64 } }, // image 1 top
+      { inlineData: { mimeType: "image/jpeg", data: bottomB64 } }, // image 2 bottom
+      { inlineData: { mimeType: "image/jpeg", data: shoesB64 } }, // image 3 shoes
+      { inlineData: { mimeType: "image/jpeg", data: bodyB64 } } // image 4 body
+    );
+  } else {
+    const [topB64, bottomB64, bodyB64] = compressedImages;
+    contents.push(
+      { inlineData: { mimeType: "image/jpeg", data: topB64 } }, // image 1 top
+      { inlineData: { mimeType: "image/jpeg", data: bottomB64 } }, // image 2 bottom
+      { inlineData: { mimeType: "image/jpeg", data: bodyB64 } } // image 3 body
+    );
+  }
   console.log(
     "Generating outfit with contents:!!!!!!!",
     JSON.stringify(contents)
@@ -184,8 +250,8 @@ async function generateOutfitInternal(
   const maxAttempts = 3;
   while (true) {
     try {
-      console.log("gen ai model!!!!!!!", genAI);
-      resp = await genAI.models.generateContent({ model: MODEL, contents });
+      console.log("Calling Gemini API with contents:", JSON.stringify(contents));
+      resp = await callGeminiAPI(contents);
       console.log("resp!!!!!!!", resp);
       break;
     } catch (err: any) {
@@ -223,12 +289,12 @@ async function generateOutfitInternal(
   // If we have IDs, save to Supabase storage
   if (topId && bottomId) {
     try {
-      const file = dataUrlToFile(
-        dataUrl,
-        `outfit_${topId}_${bottomId}_${Date.now()}.png`
-      );
+      const filename = shoeId 
+        ? `outfit_${topId}_${bottomId}_${shoeId}_${Date.now()}.png`
+        : `outfit_${topId}_${bottomId}_${Date.now()}.png`;
+      const file = dataUrlToFile(dataUrl, filename);
       const storageUrl = await uploadImage("GENERATED", file, file.name);
-      await saveCachedComposite(topId, bottomId, storageUrl);
+      await saveCachedComposite(topId, bottomId, storageUrl, shoeId);
       return { success: true, imageUrl: storageUrl };
     } catch (error) {
       console.error("Error saving to Supabase:", error);
@@ -274,7 +340,7 @@ async function generateNanoOutfitInternal(
   const maxAttempts = 3;
   while (true) {
     try {
-      resp = await genAI.models.generateContent({ model: MODEL, contents });
+      resp = await callGeminiAPI(contents);
       break;
     } catch (err: any) {
       if (!isQuotaError(err) || attempt >= maxAttempts - 1) {
@@ -356,7 +422,7 @@ async function generateOutfitTransferInternal(
   const maxAttempts = 3;
   while (true) {
     try {
-      resp = await genAI.models.generateContent({ model: MODEL, contents });
+      resp = await callGeminiAPI(contents);
       break;
     } catch (err: any) {
       if (!isQuotaError(err) || attempt >= maxAttempts - 1) {
@@ -410,14 +476,18 @@ export class OutfitGenerator {
     bottomPath: string,
     bodyPath: string = DEFAULT_BODY_PATH,
     topId?: string,
-    bottomId?: string
+    bottomId?: string,
+    shoePath?: string,
+    shoeId?: string
   ): Promise<OutfitGenerationResult> {
     return generateOutfitInternal(
       topPath,
       bottomPath,
       bodyPath,
       topId,
-      bottomId
+      bottomId,
+      shoePath,
+      shoeId
     );
   }
 

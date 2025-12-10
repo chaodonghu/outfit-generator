@@ -4,13 +4,14 @@ import { useOutfitGeneration } from "./hooks/useOutfitGeneration";
 import {
   addClothingItem,
   getClothingItems,
+  deleteClothingItem,
   ClothingItem as SupabaseClothingItem,
 } from "./lib/supabase";
 import { rateLimiter } from "./services/rateLimiter";
 import { LocalClothingItem, RateLimitResult } from "./types";
+import { fetchImageAsFile, promptForImageUrl } from "./utils/imageUrlHandler";
 
 // Import components
-import { UploadSection } from "./components/UploadSection";
 import { ClothingCarousel } from "./components/ClothingCarousel";
 import { ControlButtons } from "./components/ControlButtons";
 import { OutfitPreview } from "./components/OutfitPreview";
@@ -25,10 +26,11 @@ const debugLog = (...args: any[]) => {
 function App() {
   const [previewTop, setPreviewTop] = useState<number>(0);
   const [previewBottom, setPreviewBottom] = useState<number>(0);
+  const [previewShoes, setPreviewShoes] = useState<number>(0);
   const [topsList, setTopsList] = useState<LocalClothingItem[]>([]);
   const [bottomsList, setBottomsList] = useState<LocalClothingItem[]>([]);
+  const [shoesList, setShoesList] = useState<LocalClothingItem[]>([]);
   const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [showUploadMenu, setShowUploadMenu] = useState<boolean>(false);
   const [generationProgress, setGenerationProgress] = useState<number>(0);
   const [showNanoWindow, setShowNanoWindow] = useState<boolean>(false);
   const [nanoText, setNanoText] = useState<string>("");
@@ -64,19 +66,21 @@ function App() {
 
   // Load clothing items from Supabase on component mount
   useEffect(() => {
-    const loadClothingItems = async () => {
+      const loadClothingItems = async () => {
       setIsLoadingItems(true);
       try {
         debugLog("Loading clothing items from Supabase...");
 
-        const [supabaseTops, supabaseBottoms] = await Promise.all([
+        const [supabaseTops, supabaseBottoms, supabaseShoes] = await Promise.all([
           getClothingItems("tops"),
           getClothingItems("bottoms"),
+          getClothingItems("shoes"),
         ]);
 
         debugLog("Loaded from Supabase:", {
           tops: supabaseTops.length,
           bottoms: supabaseBottoms.length,
+          shoes: supabaseShoes.length,
         });
 
         // Convert Supabase items to local format
@@ -108,19 +112,35 @@ function App() {
           })
         );
 
+        const convertedShoes: LocalClothingItem[] = supabaseShoes.map(
+          (item: SupabaseClothingItem) => ({
+            id: item.id,
+            name: item.name,
+            imageUrl: item.image_url,
+            offset: {
+              x: 0,
+              y: 120,
+              scale: 1.0,
+              zIndex: 8,
+            },
+          })
+        );
+
         // Always set the lists, even if empty
         // this is so that you can see this
         setTopsList(convertedTops);
         setBottomsList(convertedBottoms);
+        setShoesList(convertedShoes);
 
         debugLog(
-          `Set ${convertedTops.length} tops and ${convertedBottoms.length} bottoms`
+          `Set ${convertedTops.length} tops, ${convertedBottoms.length} bottoms, and ${convertedShoes.length} shoes`
         );
       } catch (error) {
         console.error("Error loading clothing items from Supabase:", error);
         // Fall back to empty arrays if database fails
         setTopsList([]);
         setBottomsList([]);
+        setShoesList([]);
         debugLog("Falling back to empty arrays due to database error");
       } finally {
         setIsLoadingItems(false);
@@ -140,14 +160,17 @@ function App() {
     });
   }, []);
 
-  // Debug logging to identify why tops/bottoms aren't showing
+  // Debug logging to identify why tops/bottoms/shoes aren't showing
   debugLog("App render - tops:", topsList);
   debugLog("App render - bottoms:", bottomsList);
+  debugLog("App render - shoes:", shoesList);
   debugLog("App render - tops.length:", topsList.length);
   debugLog("App render - bottoms.length:", bottomsList.length);
+  debugLog("App render - shoes.length:", shoesList.length);
 
   const topsCarousel = useCarousel(topsList.length, "tops");
   const bottomsCarousel = useCarousel(bottomsList.length, "bottoms");
+  const shoesCarousel = useCarousel(shoesList.length, "shoes");
   const {
     generatedImage,
     isGenerating,
@@ -198,32 +221,33 @@ function App() {
     debugLog("Model image reset to default");
   }, []);
 
-  // Handle file upload
+  // Handle file upload (from drag-drop or file picker)
   const handleFileUpload = useCallback(
-    async (category: "tops" | "bottoms") => {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.multiple = true; // Allow multiple file selection
-
-      input.onchange = async (event) => {
-        const files = (event.target as HTMLInputElement).files;
-        debugLog("Files selected:", files?.length);
+    async (category: "tops" | "bottoms" | "shoes", droppedFiles?: FileList) => {
+      // Helper function to process files
+      const processFiles = async (files: FileList) => {
+        debugLog("Files to upload:", files.length);
 
         if (files && files.length > 0) {
           setIsUploading(true);
-          setShowUploadMenu(false);
 
           try {
             const uploadPromises = Array.from(files).map(
               async (file, index) => {
-                const nextNumber =
-                  (category === "tops" ? topsList.length : bottomsList.length) +
-                  index +
-                  1;
-                const name = `${
-                  category === "tops" ? "Top" : "Bottom"
-                } ${nextNumber}`;
+                const currentLength =
+                  category === "tops"
+                    ? topsList.length
+                    : category === "bottoms"
+                    ? bottomsList.length
+                    : shoesList.length;
+                const nextNumber = currentLength + index + 1;
+                const categoryLabel =
+                  category === "tops"
+                    ? "Top"
+                    : category === "bottoms"
+                    ? "Bottom"
+                    : "Shoe";
+                const name = `${categoryLabel} ${nextNumber}`;
 
                 debugLog(`Attempting to upload: ${name}`);
 
@@ -235,9 +259,9 @@ function App() {
                   imageUrl: newItem.image_url,
                   offset: {
                     x: 0,
-                    y: category === "tops" ? -20 : 50,
+                    y: category === "tops" ? -20 : category === "bottoms" ? 50 : 120,
                     scale: 1.0,
-                    zIndex: category === "tops" ? 10 : 9,
+                    zIndex: category === "tops" ? 10 : category === "bottoms" ? 9 : 8,
                   },
                 };
 
@@ -250,8 +274,10 @@ function App() {
 
             if (category === "tops") {
               setTopsList((prev) => [...prev, ...newItems]);
-            } else {
+            } else if (category === "bottoms") {
               setBottomsList((prev) => [...prev, ...newItems]);
+            } else {
+              setShoesList((prev) => [...prev, ...newItems]);
             }
 
             debugLog(
@@ -267,9 +293,159 @@ function App() {
         }
       };
 
-      input.click();
+      // If files were dropped, process them directly
+      if (droppedFiles) {
+        await processFiles(droppedFiles);
+      } else {
+        // Otherwise, show file picker
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.multiple = true; // Allow multiple file selection
+
+        input.onchange = async (event) => {
+          const files = (event.target as HTMLInputElement).files;
+          if (files) {
+            await processFiles(files);
+          }
+        };
+
+        input.click();
+      }
     },
-    [topsList.length, bottomsList.length]
+    [topsList.length, bottomsList.length, shoesList.length]
+  );
+
+  // Handle URL-based upload
+  const handleUrlUpload = useCallback(
+    async (category: "tops" | "bottoms" | "shoes") => {
+      // Prompt user for URL
+      const url = promptForImageUrl(category);
+      
+      if (!url) {
+        return; // User cancelled or invalid URL
+      }
+
+      setIsUploading(true);
+
+      try {
+        debugLog(`Attempting to fetch image from URL: ${url}`);
+        
+        // Fetch the image as a File object
+        const file = await fetchImageAsFile(url);
+        
+        const currentLength =
+          category === "tops"
+            ? topsList.length
+            : category === "bottoms"
+            ? bottomsList.length
+            : shoesList.length;
+        const nextNumber = currentLength + 1;
+        const categoryLabel =
+          category === "tops"
+            ? "Top"
+            : category === "bottoms"
+            ? "Bottom"
+            : "Shoe";
+        const name = `${categoryLabel} ${nextNumber}`;
+
+        debugLog(`Uploading image from URL as: ${name}`);
+
+        // Use the existing addClothingItem function
+        const newItem = await addClothingItem(name, category, file);
+
+        const newClothingItem: LocalClothingItem = {
+          id: newItem.id,
+          name: newItem.name,
+          imageUrl: newItem.image_url,
+          offset: {
+            x: 0,
+            y: category === "tops" ? -20 : category === "bottoms" ? 50 : 120,
+            scale: 1.0,
+            zIndex: category === "tops" ? 10 : category === "bottoms" ? 9 : 8,
+          },
+        };
+
+        // Add to the appropriate list
+        if (category === "tops") {
+          setTopsList((prev) => [...prev, newClothingItem]);
+        } else if (category === "bottoms") {
+          setBottomsList((prev) => [...prev, newClothingItem]);
+        } else {
+          setShoesList((prev) => [...prev, newClothingItem]);
+        }
+
+        debugLog(`Successfully added ${name} from URL`);
+      } catch (error) {
+        console.error(`Error uploading from URL:`, error);
+        alert(
+          `Failed to load image from URL. Please make sure:\n` +
+          `1. The URL is publicly accessible\n` +
+          `2. The URL points to a valid image file\n` +
+          `3. CORS is enabled on the image server\n\n` +
+          `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [topsList.length, bottomsList.length, shoesList.length]
+  );
+
+  // Handle delete item
+  const handleDeleteItem = useCallback(
+    async (category: "tops" | "bottoms" | "shoes", itemId: string, currentIndex: number) => {
+      if (!confirm("Are you sure you want to delete this item?")) {
+        return;
+      }
+
+      try {
+        debugLog(`Deleting item ${itemId} from ${category}`);
+        
+        // Delete from Supabase
+        await deleteClothingItem(itemId);
+
+        // Update local state
+        if (category === "tops") {
+          setTopsList((prev) => {
+            const newList = prev.filter((item) => item.id !== itemId);
+            // Adjust carousel index if needed
+            if (currentIndex >= newList.length && newList.length > 0) {
+              topsCarousel.setIndex(newList.length - 1);
+            } else if (newList.length === 0) {
+              topsCarousel.setIndex(0);
+            }
+            return newList;
+          });
+        } else if (category === "bottoms") {
+          setBottomsList((prev) => {
+            const newList = prev.filter((item) => item.id !== itemId);
+            if (currentIndex >= newList.length && newList.length > 0) {
+              bottomsCarousel.setIndex(newList.length - 1);
+            } else if (newList.length === 0) {
+              bottomsCarousel.setIndex(0);
+            }
+            return newList;
+          });
+        } else {
+          setShoesList((prev) => {
+            const newList = prev.filter((item) => item.id !== itemId);
+            if (currentIndex >= newList.length && newList.length > 0) {
+              shoesCarousel.setIndex(newList.length - 1);
+            } else if (newList.length === 0) {
+              shoesCarousel.setIndex(0);
+            }
+            return newList;
+          });
+        }
+
+        debugLog(`Successfully deleted item from ${category}`);
+      } catch (error) {
+        console.error(`Error deleting item:`, error);
+        alert(`Failed to delete item. Please try again.`);
+      }
+    },
+    [topsCarousel, bottomsCarousel, shoesCarousel]
   );
 
   // Handle random selection
@@ -286,11 +462,22 @@ function App() {
     topsCarousel.setIndex(randomTop);
     bottomsCarousel.setIndex(randomBottom);
 
-    debugLog("Random outfit selected:", {
-      top: topsList[randomTop].id,
-      bottom: bottomsList[randomBottom].id,
-    });
-  }, [topsList, bottomsList, topsCarousel, bottomsCarousel]);
+    // Also randomize shoes if available
+    if (shoesList.length > 0) {
+      const randomShoes = Math.floor(Math.random() * shoesList.length);
+      shoesCarousel.setIndex(randomShoes);
+      debugLog("Random outfit selected:", {
+        top: topsList[randomTop].id,
+        bottom: bottomsList[randomBottom].id,
+        shoes: shoesList[randomShoes].id,
+      });
+    } else {
+      debugLog("Random outfit selected:", {
+        top: topsList[randomTop].id,
+        bottom: bottomsList[randomBottom].id,
+      });
+    }
+  }, [topsList, bottomsList, shoesList, topsCarousel, bottomsCarousel, shoesCarousel]);
 
   // Handle select button - generate outfit with rate limiting
   const handleSelect = useCallback(async () => {
@@ -314,16 +501,18 @@ function App() {
 
     const topItem = topsList[previewTop];
     const bottomItem = bottomsList[previewBottom];
+    const shoeItem = shoesList.length > 0 ? shoesList[previewShoes] : undefined;
 
     if (topItem && bottomItem) {
       debugLog("🤖 Generating outfit with:", {
         top: topItem.id,
         bottom: bottomItem.id,
+        shoes: shoeItem?.id || "none",
       });
 
       // Reset progress and start generation
       setGenerationProgress(0);
-      await generateOutfit(topItem, bottomItem, modelImageUrl);
+      await generateOutfit(topItem, bottomItem, modelImageUrl, shoeItem);
     }
   }, [
     canGenerate,
@@ -331,8 +520,10 @@ function App() {
     hasApiKey,
     previewTop,
     previewBottom,
+    previewShoes,
     topsList,
     bottomsList,
+    shoesList,
     modelImageUrl,
   ]);
 
@@ -478,20 +669,16 @@ function App() {
           <div className="main-container">
           {/* Left Column - Selection Area */}
           <div className="left-column">
-            <UploadSection
-              isUploading={isUploading}
-              showUploadMenu={showUploadMenu}
-              onToggleUploadMenu={() => setShowUploadMenu(!showUploadMenu)}
-              onUploadTops={() => handleFileUpload("tops")}
-              onUploadBottoms={() => handleFileUpload("bottoms")}
-            />
-
             <ClothingCarousel
               items={topsList}
               carousel={topsCarousel}
               category="tops"
               onImageError={handleImageError}
               isLoading={isLoadingItems}
+              onUploadFile={(files) => handleFileUpload("tops", files)}
+              onUploadFromUrl={() => handleUrlUpload("tops")}
+              onDeleteItem={(itemId, index) => handleDeleteItem("tops", itemId, index)}
+              isUploading={isUploading}
             />
 
             <ClothingCarousel
@@ -500,6 +687,22 @@ function App() {
               category="bottoms"
               onImageError={handleImageError}
               isLoading={isLoadingItems}
+              onUploadFile={(files) => handleFileUpload("bottoms", files)}
+              onUploadFromUrl={() => handleUrlUpload("bottoms")}
+              onDeleteItem={(itemId, index) => handleDeleteItem("bottoms", itemId, index)}
+              isUploading={isUploading}
+            />
+
+            <ClothingCarousel
+              items={shoesList}
+              carousel={shoesCarousel}
+              category="shoes"
+              onImageError={handleImageError}
+              isLoading={isLoadingItems}
+              onUploadFile={(files) => handleFileUpload("shoes", files)}
+              onUploadFromUrl={() => handleUrlUpload("shoes")}
+              onDeleteItem={(itemId, index) => handleDeleteItem("shoes", itemId, index)}
+              isUploading={isUploading}
             />
 
             <ControlButtons
