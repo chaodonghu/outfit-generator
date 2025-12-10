@@ -38,6 +38,7 @@ export function OutfitPreview({
               flexDirection: "column",
               gap: "8px",
               alignItems: "center",
+              zIndex: 10,
             }}
           >
             <div className="progress-indicator" style={{ width: "100%" }}>
@@ -52,8 +53,8 @@ export function OutfitPreview({
           </div>
         )}
 
-        {/* Show model image when not generating and no generated image */}
-        {!isGenerating && !generatedImage && (
+        {/* Show model image when not generating, no generated image, and no error */}
+        {!isGenerating && !generatedImage && !error && (
           <>
             <img
               src={modelImageUrl}
@@ -110,7 +111,18 @@ export function OutfitPreview({
         )}
 
         {hasApiKey && error && !error.includes("composite") && (
-          <div className="error-message">
+          <div 
+            className="error-message"
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 20,
+              width: "80%",
+              maxWidth: "400px",
+            }}
+          >
             <p>Error: {error}</p>
             <button onClick={onClearGeneratedImage}>Clear</button>
           </div>
