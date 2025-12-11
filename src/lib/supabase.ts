@@ -194,6 +194,11 @@ export async function deleteClothingItem(id: string): Promise<void> {
     .single();
 
   if (fetchError) {
+    // If item doesn't exist in database, consider it already deleted
+    if (fetchError.code === 'PGRST116') {
+      console.warn(`Item ${id} not found in database, already deleted`);
+      return;
+    }
     throw fetchError;
   }
 
@@ -208,29 +213,33 @@ export async function deleteClothingItem(id: string): Promise<void> {
   // Try to delete from storage first
   try {
     await deleteImage("CLOTHING", fileName);
-  } catch (error) {
-    console.error("Failed to delete image from storage:", error);
-    storageError = error;
+  } catch (error: any) {
+    // If file doesn't exist (404), that's fine - it's already gone
+    const isNotFound = error?.message?.includes('not found') || 
+                       error?.statusCode === 404 || 
+                       error?.status === 404;
+    
+    if (isNotFound) {
+      console.log(`Storage file ${fileName} already deleted or doesn't exist`);
+    } else {
+      console.error("Failed to delete image from storage:", error);
+      storageError = error;
+    }
     // Continue to delete from database even if storage deletion fails
   }
 
-  // Delete from database
+  // Delete from database - this is the critical operation
   const { error } = await supabase.from("clothing_items").delete().eq("id", id);
   if (error) {
     dbError = error;
   }
 
-  // If both operations failed, throw an error
-  if (storageError && dbError) {
-    throw new Error(`Failed to delete both storage and database record: Storage: ${storageError}, Database: ${dbError}`);
-  }
-  
-  // If only database deletion failed, throw that error (more critical)
+  // If database deletion failed, throw that error (most critical)
   if (dbError) {
     throw dbError;
   }
 
-  // If only storage deletion failed, log a warning but don't throw
+  // If only storage deletion failed (and it wasn't a "not found" error), log a warning
   // (the database record is gone, which is the main concern)
   if (storageError) {
     console.warn("Item deleted from database but storage file may still exist:", storageError);
