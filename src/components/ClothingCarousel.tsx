@@ -11,7 +11,7 @@ interface ClothingCarouselProps {
   items: LocalClothingItem[];
   carousel: CarouselControls;
   category: "tops" | "bottoms" | "shoes";
-  onImageError: (imageUrl: string) => void;
+  onImageError: (itemId: string) => void;
   isLoading?: boolean;
   onUploadFile: (files?: FileList) => void;
   onUploadFromUrl: () => void;
@@ -248,7 +248,7 @@ export function ClothingCarousel({
               src={items[carousel.index].imageUrl}
               alt={items[carousel.index].name}
               className="clothing-item"
-              onError={() => onImageError(items[carousel.index].imageUrl)}
+              onError={() => onImageError(items[carousel.index].id)}
             />
           ) : (
             <div

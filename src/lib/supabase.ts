@@ -54,7 +54,6 @@ export async function uploadImage(
     });
 
   if (error) {
-    console.error("Error uploading image:", error);
     throw error;
   }
 
@@ -75,7 +74,6 @@ export async function deleteImage(
   const { error } = await supabase.storage.from(bucketName).remove([fileName]);
 
   if (error) {
-    console.error("Error deleting image:", error);
     throw error;
   }
 }
@@ -116,7 +114,6 @@ export async function getCachedComposite(
   const { data, error } = await query.maybeSingle();
 
   if (error) {
-    console.error("Error fetching cached composite:", error);
     return null;
   }
 
@@ -137,7 +134,6 @@ export async function saveCachedComposite(
   });
 
   if (error) {
-    console.error("Error saving cached composite:", error);
     throw error;
   }
 }
@@ -152,7 +148,6 @@ export async function getClothingItems(
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching clothing items:", error);
     return [];
   }
 
@@ -184,7 +179,6 @@ export async function addClothingItem(
     .single();
 
   if (error) {
-    console.error("Error adding clothing item:", error);
     throw error;
   }
 
@@ -200,7 +194,6 @@ export async function deleteClothingItem(id: string): Promise<void> {
     .single();
 
   if (fetchError) {
-    console.error("Error fetching clothing item:", fetchError);
     throw fetchError;
   }
 
@@ -215,7 +208,6 @@ export async function deleteClothingItem(id: string): Promise<void> {
   const { error } = await supabase.from("clothing_items").delete().eq("id", id);
 
   if (error) {
-    console.error("Error deleting clothing item:", error);
     throw error;
   }
 }

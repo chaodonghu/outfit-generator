@@ -18,10 +18,7 @@ import { OutfitPreview } from "./components/OutfitPreview";
 import { NanoWindow } from "./components/NanoWindow";
 import { OutfitTransferWindow } from "./components/OutfitTransferWindow";
 
-// Debug logger (no-op in production)
-const debugLog = (...args: any[]) => {
-  if (import.meta.env.DEV) console.log(...args);
-};
+// Removed debug logger for production
 
 function App() {
   const [previewTop, setPreviewTop] = useState<number>(0);
@@ -64,84 +61,81 @@ function App() {
     setIsDarkMode((prev) => !prev);
   };
 
+  // Helper function to validate if an image URL is accessible
+  const validateImageUrl = async (url: string): Promise<boolean> => {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      return response.ok;
+    } catch (error) {
+      console.error(`Failed to validate image URL: ${url}`, error);
+      return false;
+    }
+  };
+
   // Load clothing items from Supabase on component mount
   useEffect(() => {
       const loadClothingItems = async () => {
       setIsLoadingItems(true);
       try {
-        debugLog("Loading clothing items from Supabase...");
-
         const [supabaseTops, supabaseBottoms, supabaseShoes] = await Promise.all([
           getClothingItems("tops"),
           getClothingItems("bottoms"),
           getClothingItems("shoes"),
         ]);
 
-        debugLog("Loaded from Supabase:", {
-          tops: supabaseTops.length,
-          bottoms: supabaseBottoms.length,
-          shoes: supabaseShoes.length,
-        });
+        // Convert and validate Supabase items
+        const convertAndValidate = async (
+          items: SupabaseClothingItem[],
+          category: "tops" | "bottoms" | "shoes"
+        ): Promise<LocalClothingItem[]> => {
+          const validatedItems: LocalClothingItem[] = [];
+          const yOffset = category === "tops" ? -20 : category === "bottoms" ? 50 : 120;
+          const zIndex = category === "tops" ? 10 : category === "bottoms" ? 9 : 8;
 
-        // Convert Supabase items to local format
-        const convertedTops: LocalClothingItem[] = supabaseTops.map(
-          (item: SupabaseClothingItem) => ({
-            id: item.id,
-            name: item.name,
-            imageUrl: item.image_url,
-            offset: {
-              x: 0,
-              y: -20,
-              scale: 1.0,
-              zIndex: 10,
-            },
-          })
-        );
+          for (const item of items) {
+            // Validate image URL
+            const isValid = await validateImageUrl(item.image_url);
+            if (isValid) {
+              validatedItems.push({
+                id: item.id,
+                name: item.name,
+                imageUrl: item.image_url,
+                offset: {
+                  x: 0,
+                  y: yOffset,
+                  scale: 1.0,
+                  zIndex: zIndex,
+                },
+              });
+            } else {
+              console.warn(`Skipping item ${item.id} (${item.name}) - image not accessible: ${item.image_url}`);
+              // Delete the item from database since image is gone
+              deleteClothingItem(item.id).catch((error) => {
+                console.error("Error deleting item with broken image:", error);
+              });
+            }
+          }
 
-        const convertedBottoms: LocalClothingItem[] = supabaseBottoms.map(
-          (item: SupabaseClothingItem) => ({
-            id: item.id,
-            name: item.name,
-            imageUrl: item.image_url,
-            offset: {
-              x: 0,
-              y: 50,
-              scale: 1.0,
-              zIndex: 9,
-            },
-          })
-        );
+          return validatedItems;
+        };
 
-        const convertedShoes: LocalClothingItem[] = supabaseShoes.map(
-          (item: SupabaseClothingItem) => ({
-            id: item.id,
-            name: item.name,
-            imageUrl: item.image_url,
-            offset: {
-              x: 0,
-              y: 120,
-              scale: 1.0,
-              zIndex: 8,
-            },
-          })
-        );
+        // Validate all items concurrently
+        const [convertedTops, convertedBottoms, convertedShoes] = await Promise.all([
+          convertAndValidate(supabaseTops, "tops"),
+          convertAndValidate(supabaseBottoms, "bottoms"),
+          convertAndValidate(supabaseShoes, "shoes"),
+        ]);
 
-        // Always set the lists, even if empty
-        // this is so that you can see this
+        // Set the lists with validated items
         setTopsList(convertedTops);
         setBottomsList(convertedBottoms);
         setShoesList(convertedShoes);
-
-        debugLog(
-          `Set ${convertedTops.length} tops, ${convertedBottoms.length} bottoms, and ${convertedShoes.length} shoes`
-        );
       } catch (error) {
         console.error("Error loading clothing items from Supabase:", error);
         // Fall back to empty arrays if database fails
         setTopsList([]);
         setBottomsList([]);
         setShoesList([]);
-        debugLog("Falling back to empty arrays due to database error");
       } finally {
         setIsLoadingItems(false);
       }
@@ -159,14 +153,6 @@ function App() {
       windowMs: 60000, // Keep 1 minute window
     });
   }, []);
-
-  // Debug logging to identify why tops/bottoms/shoes aren't showing
-  debugLog("App render - tops:", topsList);
-  debugLog("App render - bottoms:", bottomsList);
-  debugLog("App render - shoes:", shoesList);
-  debugLog("App render - tops.length:", topsList.length);
-  debugLog("App render - bottoms.length:", bottomsList.length);
-  debugLog("App render - shoes.length:", shoesList.length);
 
   const topsCarousel = useCarousel(topsList.length, "tops");
   const bottomsCarousel = useCarousel(bottomsList.length, "bottoms");
@@ -206,7 +192,6 @@ function App() {
         reader.onload = (e) => {
           const dataUrl = e.target?.result as string;
           setModelImageUrl(dataUrl);
-          debugLog("Model image uploaded:", file.name);
         };
         reader.readAsDataURL(file);
       }
@@ -218,7 +203,6 @@ function App() {
   // Reset model to default
   const handleResetModel = useCallback(() => {
     setModelImageUrl("/assets/model.png");
-    debugLog("Model image reset to default");
   }, []);
 
   // Handle file upload (from drag-drop or file picker)
@@ -226,8 +210,6 @@ function App() {
     async (category: "tops" | "bottoms" | "shoes", droppedFiles?: FileList) => {
       // Helper function to process files
       const processFiles = async (files: FileList) => {
-        debugLog("Files to upload:", files.length);
-
         if (files && files.length > 0) {
           setIsUploading(true);
 
@@ -248,8 +230,6 @@ function App() {
                     ? "Bottom"
                     : "Shoe";
                 const name = `${categoryLabel} ${nextNumber}`;
-
-                debugLog(`Attempting to upload: ${name}`);
 
                 const newItem = await addClothingItem(name, category, file);
 
@@ -279,11 +259,6 @@ function App() {
             } else {
               setShoesList((prev) => [...prev, ...newItems]);
             }
-
-            debugLog(
-              `Added ${newItems.length} new ${category}:`,
-              newItems.map((item) => item.name)
-            );
           } catch (error) {
             console.error(`Error uploading ${category}:`, error);
             alert(`Failed to upload some ${category}. Please try again.`);
@@ -329,8 +304,6 @@ function App() {
       setIsUploading(true);
 
       try {
-        debugLog(`Attempting to fetch image from URL: ${url}`);
-        
         // Fetch the image as a File object
         const file = await fetchImageAsFile(url);
         
@@ -348,8 +321,6 @@ function App() {
             ? "Bottom"
             : "Shoe";
         const name = `${categoryLabel} ${nextNumber}`;
-
-        debugLog(`Uploading image from URL as: ${name}`);
 
         // Use the existing addClothingItem function
         const newItem = await addClothingItem(name, category, file);
@@ -374,8 +345,6 @@ function App() {
         } else {
           setShoesList((prev) => [...prev, newClothingItem]);
         }
-
-        debugLog(`Successfully added ${name} from URL`);
       } catch (error) {
         console.error(`Error uploading from URL:`, error);
         alert(
@@ -400,8 +369,6 @@ function App() {
       }
 
       try {
-        debugLog(`Deleting item ${itemId} from ${category}`);
-        
         // Delete from Supabase
         await deleteClothingItem(itemId);
 
@@ -438,8 +405,6 @@ function App() {
             return newList;
           });
         }
-
-        debugLog(`Successfully deleted item from ${category}`);
       } catch (error) {
         console.error(`Error deleting item:`, error);
         alert(`Failed to delete item. Please try again.`);
@@ -451,7 +416,6 @@ function App() {
   // Handle random selection
   const handleRandom = useCallback(() => {
     if (topsList.length === 0 || bottomsList.length === 0) {
-      debugLog("Cannot select random outfit - no items available");
       return;
     }
 
@@ -466,36 +430,17 @@ function App() {
     if (shoesList.length > 0) {
       const randomShoes = Math.floor(Math.random() * shoesList.length);
       shoesCarousel.setIndex(randomShoes);
-      debugLog("Random outfit selected:", {
-        top: topsList[randomTop].id,
-        bottom: bottomsList[randomBottom].id,
-        shoes: shoesList[randomShoes].id,
-      });
-    } else {
-      debugLog("Random outfit selected:", {
-        top: topsList[randomTop].id,
-        bottom: bottomsList[randomBottom].id,
-      });
     }
   }, [topsList, bottomsList, shoesList, topsCarousel, bottomsCarousel, shoesCarousel]);
 
   // Handle select button - generate outfit with rate limiting
   const handleSelect = useCallback(async () => {
     if (!hasApiKey) {
-      debugLog("API key not configured, skipping outfit generation");
       return;
     }
 
     const rateLimitCheck: RateLimitResult = canGenerate();
     if (!rateLimitCheck.allowed) {
-      console.warn("🚫 Rate limit check failed:", rateLimitCheck.reason);
-      if (rateLimitCheck.waitTime) {
-        debugLog(
-          `⏰ Please wait ${Math.ceil(
-            rateLimitCheck.waitTime / 1000
-          )} seconds before trying again`
-        );
-      }
       return;
     }
 
@@ -504,12 +449,6 @@ function App() {
     const shoeItem = shoesList.length > 0 ? shoesList[previewShoes] : undefined;
 
     if (topItem && bottomItem) {
-      debugLog("🤖 Generating outfit with:", {
-        top: topItem.id,
-        bottom: bottomItem.id,
-        shoes: shoeItem?.id || "none",
-      });
-
       // Reset progress and start generation
       setGenerationProgress(0);
       await generateOutfit(topItem, bottomItem, modelImageUrl, shoeItem);
@@ -574,11 +513,7 @@ function App() {
 
     const logStatus = () => {
       const status: RateLimitResult = canGenerate();
-      if (status.allowed) {
-        debugLog("✅ API calls available - ready to generate");
-      } else {
-        debugLog("⏳ API rate limited:", status.reason);
-      }
+      // Rate limit status check complete
     };
 
     // Log initial status
@@ -590,10 +525,63 @@ function App() {
     return () => clearInterval(interval);
   }, [canGenerate, hasApiKey]);
 
-  // Helper function to handle image load errors
-  const handleImageError = useCallback((imageUrl: string) => {
-    console.error("Failed to load image:", imageUrl);
-  }, []);
+  // Helper function to handle image load errors and remove broken items
+  const handleImageError = useCallback((category: "tops" | "bottoms" | "shoes", itemId: string) => {
+    console.error(`Failed to load image for ${category} item ${itemId}. Removing from list.`);
+    
+    const categoryLabel = category === "tops" ? "top" : category === "bottoms" ? "bottom" : "shoe";
+    
+    // Remove the item with the broken image from the local state
+    if (category === "tops") {
+      setTopsList((prev) => {
+        const item = prev.find((i) => i.id === itemId);
+        if (item) {
+          alert(`Removed ${item.name} - image no longer accessible`);
+        }
+        const newList = prev.filter((item) => item.id !== itemId);
+        // Adjust carousel index if needed
+        if (topsCarousel.index >= newList.length && newList.length > 0) {
+          topsCarousel.setIndex(newList.length - 1);
+        } else if (newList.length === 0) {
+          topsCarousel.setIndex(0);
+        }
+        return newList;
+      });
+    } else if (category === "bottoms") {
+      setBottomsList((prev) => {
+        const item = prev.find((i) => i.id === itemId);
+        if (item) {
+          alert(`Removed ${item.name} - image no longer accessible`);
+        }
+        const newList = prev.filter((item) => item.id !== itemId);
+        if (bottomsCarousel.index >= newList.length && newList.length > 0) {
+          bottomsCarousel.setIndex(newList.length - 1);
+        } else if (newList.length === 0) {
+          bottomsCarousel.setIndex(0);
+        }
+        return newList;
+      });
+    } else {
+      setShoesList((prev) => {
+        const item = prev.find((i) => i.id === itemId);
+        if (item) {
+          alert(`Removed ${item.name} - image no longer accessible`);
+        }
+        const newList = prev.filter((item) => item.id !== itemId);
+        if (shoesCarousel.index >= newList.length && newList.length > 0) {
+          shoesCarousel.setIndex(newList.length - 1);
+        } else if (newList.length === 0) {
+          shoesCarousel.setIndex(0);
+        }
+        return newList;
+      });
+    }
+
+    // Delete from database as well since the image is gone
+    deleteClothingItem(itemId).catch((error) => {
+      console.error("Error deleting item from database:", error);
+    });
+  }, [topsCarousel, bottomsCarousel, shoesCarousel]);
 
   // Handle nano banana styling
   const handleNanoStyle = useCallback(async () => {
@@ -619,8 +607,6 @@ function App() {
     setNanoText(""); // Clear the text
 
     try {
-      debugLog("Nano styling with occasion:", occasionText);
-
       // Use the hook's generateNanoOutfit method
       await generateNanoOutfit(occasionText, modelImageUrl);
     } catch (error: any) {
@@ -644,10 +630,8 @@ function App() {
       }
 
       try {
-        debugLog("Starting outfit transfer with file:", file.name);
         await generateOutfitTransfer(file, modelImageUrl);
       } catch (error: any) {
-        console.error("Error in outfit transfer:", error);
         // Error handling is already done in the hook
       }
     },
@@ -673,7 +657,7 @@ function App() {
               items={topsList}
               carousel={topsCarousel}
               category="tops"
-              onImageError={handleImageError}
+              onImageError={(itemId) => handleImageError("tops", itemId)}
               isLoading={isLoadingItems}
               onUploadFile={(files) => handleFileUpload("tops", files)}
               onUploadFromUrl={() => handleUrlUpload("tops")}
@@ -685,7 +669,7 @@ function App() {
               items={bottomsList}
               carousel={bottomsCarousel}
               category="bottoms"
-              onImageError={handleImageError}
+              onImageError={(itemId) => handleImageError("bottoms", itemId)}
               isLoading={isLoadingItems}
               onUploadFile={(files) => handleFileUpload("bottoms", files)}
               onUploadFromUrl={() => handleUrlUpload("bottoms")}
@@ -697,7 +681,7 @@ function App() {
               items={shoesList}
               carousel={shoesCarousel}
               category="shoes"
-              onImageError={handleImageError}
+              onImageError={(itemId) => handleImageError("shoes", itemId)}
               isLoading={isLoadingItems}
               onUploadFile={(files) => handleFileUpload("shoes", files)}
               onUploadFromUrl={() => handleUrlUpload("shoes")}

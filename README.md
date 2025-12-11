@@ -24,8 +24,6 @@ VITE_GOOGLE_API_KEY=your_google_api_key
 
 3. **Run the app**
 ```npm run dev```
-Your retro window should pop up! 
-Note: a electron popup might show up and not work so you can just open it in the browser. 
 
 ---
 

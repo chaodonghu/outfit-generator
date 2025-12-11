@@ -111,7 +111,12 @@ async function compressImage(
   quality: number = 0.7
 ): Promise<string> {
   const res = await fetch(path);
-  if (!res.ok) throw new Error(`Failed to load ${path}`);
+  if (!res.ok) {
+    if (res.status === 404) {
+      throw new Error(`Image not found (404): ${path}. The item may have been deleted from storage.`);
+    }
+    throw new Error(`Failed to load image (${res.status}): ${path}`);
+  }
   const blob = await res.blob();
 
   return new Promise((resolve, reject) => {
@@ -240,22 +245,14 @@ async function generateOutfitInternal(
       { inlineData: { mimeType: "image/jpeg", data: bodyB64 } } // image 3 body
     );
   }
-  console.log(
-    "Generating outfit with contents:!!!!!!!",
-    JSON.stringify(contents)
-  );
-
   let resp;
   let attempt = 0;
   const maxAttempts = 3;
   while (true) {
     try {
-      console.log("Calling Gemini API with contents:", JSON.stringify(contents));
       resp = await callGeminiAPI(contents);
-      console.log("resp!!!!!!!", resp);
       break;
     } catch (err: any) {
-      console.log("err!!!!!!!", err);
       if (!isQuotaError(err) || attempt >= maxAttempts - 1) {
         const msg =
           typeof err?.message === "string" ? err.message : JSON.stringify(err);
@@ -371,10 +368,6 @@ async function generateNanoOutfitInternal(
   }
 
   const dataUrl = `data:image/png;base64,${imagePart.inlineData.data}`;
-  console.log("Generated Nano Outfit Image:", dataUrl);
-  console.log(
-    "You can copy this data URL and paste it in a new browser tab to view the image"
-  );
   cache.set(key, dataUrl);
 
   return { success: true, imageUrl: dataUrl };
