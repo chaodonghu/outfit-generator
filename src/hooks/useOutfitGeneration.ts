@@ -39,9 +39,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
   const generateOutfit = useCallback(
     async (top: ClothingItem, bottom: ClothingItem, modelImageUrl?: string, shoes?: ClothingItem) => {
       if (inFlightRef.current) {
-        console.warn(
-          "⏳ Generate already in flight. Ignoring duplicate click."
-        );
         return;
       }
       inFlightRef.current = true;
@@ -52,7 +49,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
       const key = `outfit::${top.id}::${bottom.id}${shoesKey}::${modelKey}`;
       if (cacheRef.current.has(key)) {
         const cached = cacheRef.current.get(key)!;
-        console.log("♻️ Using cached result for", top.id, bottom.id, shoes?.id);
         setGeneratedImage(cached.url);
         setIsComposite(cached.isComposite);
         setError(null);
@@ -63,7 +59,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
       // Check rate limit first
       const rateLimitCheck = canGenerate();
       if (!rateLimitCheck.allowed) {
-        console.warn("🚫 Rate limit exceeded:", rateLimitCheck.reason);
         setError(rateLimitCheck.reason || "Rate limit exceeded");
         setGeneratedImage(null);
         setIsComposite(false);
@@ -71,7 +66,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
         return;
       }
 
-      console.log("🤖 Starting outfit generation for:", top.id, bottom.id, shoes?.id || "no shoes");
       setIsGenerating(true);
       setError(null);
       setIsComposite(false);
@@ -79,10 +73,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
       try {
         // Record the API call
         rateLimiter.recordCall();
-        console.log(
-          "📊 API call recorded. Rate limit status:",
-          rateLimiter.getStatus()
-        );
 
         // Try AI generation first
         const result: OutfitGenerationResult =
@@ -97,7 +87,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
           );
 
         if (result.success && result.imageUrl) {
-          console.log("✨ AI-generated image created successfully");
           setGeneratedImage(result.imageUrl);
           setIsComposite(false);
           cacheRef.current.set(key, {
@@ -106,14 +95,12 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
           });
         } else {
           // Fallback to composite image
-          console.log("🎨 AI generation failed, using composite image");
           const compositeResult = await imageComposer.createComposite(
             top.imageUrl,
             bottom.imageUrl
           );
 
           if (compositeResult.success && compositeResult.imageUrl) {
-            console.log("🎨 Composite image created successfully");
             setGeneratedImage(compositeResult.imageUrl);
             setIsComposite(true);
             setError("Using composite image (AI generation unavailable)");
@@ -128,14 +115,12 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
           }
         }
       } catch (err) {
-        console.error("❌ Failed to generate outfit:", err);
         setError("Failed to generate outfit. Please try again.");
         setGeneratedImage(null);
         setIsComposite(false);
       } finally {
         setIsGenerating(false);
         inFlightRef.current = false;
-        console.log("🏁 Outfit generation completed");
       }
     },
     [canGenerate]
@@ -144,9 +129,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
   const generateNanoOutfit = useCallback(
     async (occasion: string, modelImageUrl?: string) => {
       if (inFlightRef.current) {
-        console.warn(
-          "⏳ Generate already in flight. Ignoring duplicate click."
-        );
         return;
       }
       inFlightRef.current = true;
@@ -156,7 +138,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
       const key = `nano::${occasion}::${modelKey}`;
       if (cacheRef.current.has(key)) {
         const cached = cacheRef.current.get(key)!;
-        console.log("♻️ Using cached nano result for", occasion);
         setGeneratedImage(cached.url);
         setIsComposite(false); // Nano outfits are always AI-generated
         setError(null);
@@ -167,7 +148,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
       // Check rate limit first
       const rateLimitCheck = canGenerate();
       if (!rateLimitCheck.allowed) {
-        console.warn("🚫 Rate limit exceeded:", rateLimitCheck.reason);
         setError(rateLimitCheck.reason || "Rate limit exceeded");
         setGeneratedImage(null);
         setIsComposite(false);
@@ -175,7 +155,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
         return;
       }
 
-      console.log("🍌 Starting nano outfit generation for:", occasion);
       setIsGenerating(true);
       setError(null);
       setIsComposite(false);
@@ -183,10 +162,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
       try {
         // Record the API call
         rateLimiter.recordCall();
-        console.log(
-          "📊 API call recorded. Rate limit status:",
-          rateLimiter.getStatus()
-        );
 
         // Call the nano outfit generator
         const result: OutfitGenerationResult =
@@ -196,7 +171,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
           );
 
         if (result.success && result.imageUrl) {
-          console.log("✨ Nano outfit generated successfully");
           setGeneratedImage(result.imageUrl);
           setIsComposite(false);
           cacheRef.current.set(key, {
@@ -207,14 +181,12 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
           throw new Error(result.error || "Failed to generate nano outfit");
         }
       } catch (err) {
-        console.error("❌ Failed to generate nano outfit:", err);
         setError("Failed to generate nano outfit. Please try again.");
         setGeneratedImage(null);
         setIsComposite(false);
       } finally {
         setIsGenerating(false);
         inFlightRef.current = false;
-        console.log("🏁 Nano outfit generation completed");
       }
     },
     [canGenerate]
@@ -223,9 +195,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
   const generateOutfitTransfer = useCallback(
     async (inspirationFile: File, modelImageUrl?: string) => {
       if (inFlightRef.current) {
-        console.warn(
-          "⏳ Generate already in flight. Ignoring duplicate click."
-        );
         return;
       }
       inFlightRef.current = true;
@@ -238,10 +207,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
       const key = `transfer::${inspirationFile.name}::${inspirationFile.size}::${modelKey}`;
       if (cacheRef.current.has(key)) {
         const cached = cacheRef.current.get(key)!;
-        console.log(
-          "♻️ Using cached transfer result for",
-          inspirationFile.name
-        );
         setGeneratedImage(cached.url);
         setIsComposite(false); // Transfer outfits are always AI-generated
         setError(null);
@@ -253,7 +218,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
       // Check rate limit first
       const rateLimitCheck = canGenerate();
       if (!rateLimitCheck.allowed) {
-        console.warn("🚫 Rate limit exceeded:", rateLimitCheck.reason);
         setError(rateLimitCheck.reason || "Rate limit exceeded");
         setGeneratedImage(null);
         setIsComposite(false);
@@ -262,7 +226,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
         return;
       }
 
-      console.log("🔄 Starting outfit transfer for:", inspirationFile.name);
       setIsGenerating(true);
       setError(null);
       setIsComposite(false);
@@ -270,10 +233,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
       try {
         // Record the API call
         rateLimiter.recordCall();
-        console.log(
-          "📊 API call recorded. Rate limit status:",
-          rateLimiter.getStatus()
-        );
 
         // Call the outfit transfer generator
         const result: OutfitGenerationResult =
@@ -283,7 +242,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
           );
 
         if (result.success && result.imageUrl) {
-          console.log("✨ Outfit transfer completed successfully");
           setGeneratedImage(result.imageUrl);
           setIsComposite(false);
           cacheRef.current.set(key, {
@@ -294,7 +252,6 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
           throw new Error(result.error || "Failed to transfer outfit");
         }
       } catch (err) {
-        console.error("❌ Failed to transfer outfit:", err);
         setError("Failed to transfer outfit. Please try again.");
         setGeneratedImage(null);
         setIsComposite(false);
@@ -302,14 +259,12 @@ export function useOutfitGeneration(): UseOutfitGenerationReturn {
         setIsGenerating(false);
         inFlightRef.current = false;
         URL.revokeObjectURL(inspirationUrl);
-        console.log("🏁 Outfit transfer completed");
       }
     },
     [canGenerate]
   );
 
   const clearGeneratedImage = useCallback(() => {
-    console.log("🗑️ Clearing generated image");
     setGeneratedImage(null);
     setIsComposite(false);
     setError(null);

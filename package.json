@@ -1,9 +1,7 @@
 {
-  "name": "outfit98",
+  "name": "generate-a-fit",
   "private": true,
   "version": "0.0.0",
-  "description": "A nostalgic Windows 98-style outfit selector desktop application",
-  "author": "Outfit98 Team",
   "type": "module",
   "scripts": {
     "dev:renderer": "vite",

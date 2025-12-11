@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { LocalClothingItem } from "../types";
 
 interface CarouselControls {
@@ -11,7 +11,7 @@ interface ClothingCarouselProps {
   items: LocalClothingItem[];
   carousel: CarouselControls;
   category: "tops" | "bottoms" | "shoes";
-  onImageError: (imageUrl: string) => void;
+  onImageError: (itemId: string) => void;
   isLoading?: boolean;
   onUploadFile: (files?: FileList) => void;
   onUploadFromUrl: () => void;
@@ -102,6 +102,7 @@ export function ClothingCarousel({
           <button
             onClick={() => onDeleteItem(items[carousel.index].id, carousel.index)}
             disabled={isUploading || isLoading}
+            className="delete-button"
             style={{
               width: "32px",
               height: "32px",
@@ -109,17 +110,30 @@ export function ClothingCarousel({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "16px",
-              borderRadius: "4px",
+              fontSize: "14px",
+              borderRadius: "6px",
               cursor: isUploading ? "not-allowed" : "pointer",
-              backgroundColor: "#dc3545",
-              color: "white",
-              border: "1px solid #c82333",
-              pointerEvents: "auto", // Enable clicks on the button
+              backgroundColor: "rgba(220, 53, 69, 0.1)",
+              color: "#dc3545",
+              border: "1px solid rgba(220, 53, 69, 0.3)",
+              pointerEvents: "auto",
+              transition: "all 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+              if (!isUploading && !isLoading) {
+                e.currentTarget.style.backgroundColor = "#dc3545";
+                e.currentTarget.style.color = "white";
+                e.currentTarget.style.borderColor = "#dc3545";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(220, 53, 69, 0.1)";
+              e.currentTarget.style.color = "#dc3545";
+              e.currentTarget.style.borderColor = "rgba(220, 53, 69, 0.3)";
             }}
             title={`Delete current ${category.slice(0, -1)}`}
           >
-            🗑️
+            ✕
           </button>
         )}
         
@@ -234,7 +248,7 @@ export function ClothingCarousel({
               src={items[carousel.index].imageUrl}
               alt={items[carousel.index].name}
               className="clothing-item"
-              onError={() => onImageError(items[carousel.index].imageUrl)}
+              onError={() => onImageError(items[carousel.index].id)}
             />
           ) : (
             <div
