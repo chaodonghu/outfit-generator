@@ -50,5 +50,5 @@ ALTER TABLE generated_outfits ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all operations on clothing_items" ON clothing_items
   FOR ALL USING (true);
 
-CREATE POLICY "Allow all operations on generated_outfits" ON generated_outfits
-  FOR ALL USING (true);
+CREATE POLICY "Enable delete access for generated_outfits" ON generated_outfits
+  FOR DELETE USING (true);

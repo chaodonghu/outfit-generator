@@ -11,7 +11,7 @@ interface UseCarouselReturn {
 }
 
 // Constants
-const STORAGE_PREFIX = 'outfit98.';
+const STORAGE_PREFIX = 'generate-a-fit';
 
 export function useCarousel(initialLength: number, storageKey: string): UseCarouselReturn {
   const storageKeyFull = `${STORAGE_PREFIX}${storageKey}`;

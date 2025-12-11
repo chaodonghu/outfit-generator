@@ -231,7 +231,13 @@ export async function deleteClothingItem(id: string): Promise<void> {
   // Delete from database - this is the critical operation
   const { error } = await supabase.from("clothing_items").delete().eq("id", id);
   if (error) {
+    console.error("DATABASE DELETION FAILED:", error);
+    console.error("Error code:", error.code);
+    console.error("Error message:", error.message);
+    console.error("Error details:", error.details);
     dbError = error;
+  } else {
+    console.log(`Successfully deleted item ${id} from database`);
   }
 
   // If database deletion failed, throw that error (most critical)
